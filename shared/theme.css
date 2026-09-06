@@ -322,21 +322,6 @@ a.tile .emoji { font-size: 2rem; display: block; }
 a.tile h2 { font-size: 1.1rem; margin: 8px 0 4px; }
 a.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
 
-.tile.soon {
-  opacity: .55;
-  pointer-events: none;
-}
-
-.tile.soon::after {
-  content: "coming soon";
-  display: inline-block;
-  margin-top: 10px;
-  font-size: .7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--muted);
-}
 
 /* ---------- inline fractions ---------- */
 

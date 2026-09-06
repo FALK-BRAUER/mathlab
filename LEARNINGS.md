@@ -89,3 +89,12 @@ broken enough to point at. `bundle.mjs` now also writes `dist/index.html`, the s
 inside a real document, and that is the URL to serve. Measured under device emulation, not
 by squinting at a narrow window: Chrome clamps a real window at 500px wide, so resizing the
 window never actually tested a phone.
+
+## 2026-09-06 — Two hand-maintained copies of the same list means one of them is wrong
+The hub existed twice: `index.html` at the project root, written by hand, and the hub built
+into the bundle. Apps were added to the bundle and not to the root file, so the site root
+served a page listing two of five games plus four "coming soon" tiles for games that had
+either been built already or been folded into Step Builder. Anyone opening the plain LAN
+address saw a project three commits out of date. `bundle.mjs` now generates the root hub
+from the apps' own `MathLab.app()` registrations, so there is one source for the list and
+drift is not possible.
