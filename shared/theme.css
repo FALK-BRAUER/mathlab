@@ -667,3 +667,24 @@ button.option:disabled { opacity: 1; }
 
 /* the story sits in the prompt slot and needs room to breathe */
 .prompt { line-height: 1.55; }
+
+/* ---------- predict the result ---------- */
+
+.predict {
+  background: var(--brand-soft);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 14px;
+}
+
+.predict b {
+  display: block;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--brand);
+  margin-bottom: 10px;
+}
+
+.predict .options { gap: 8px; }
+.predict button.option { font-size: 1.15rem; padding: 13px 18px; }

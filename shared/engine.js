@@ -208,7 +208,7 @@ const MathLab = (() => {
       </div>
       <div class="answer-row">
         <button data-next hidden>Next question →</button>
-        <button class="ghost" data-hint-btn>Need a hint?</button>
+        <button class="ghost" data-hint-btn${config.ownHints ? ' hidden' : ''}>Need a hint?</button>
       </div>
     `;
 
@@ -246,13 +246,14 @@ const MathLab = (() => {
       el.best.textContent = best;
     }
 
-    function submit(correct) {
+    /** submit(correct) — or submit(correct, points) when the app scores its own process. */
+    function submit(correct, points) {
       if (answered) return;
       answered = true;
 
       if (correct) {
         streak += 1;
-        score += 10 + Math.min(streak, 10) * 2;   // streaks pay, but cap the runaway
+        score += typeof points === 'number' ? points : 10 + Math.min(streak, 10) * 2;
         if (streak > best) {
           best = streak;
           store.write(config.key, { best });
@@ -344,7 +345,7 @@ const MathLab = (() => {
   function run(key, mount) {
     const def = apps.get(key);
     if (!def) throw new Error('unknown app: ' + key);
-    createGame({ key, mount: mount || '#game', levels: def.build() });
+    createGame({ key, mount: mount || '#game', levels: def.build(), ownHints: def.ownHints });
   }
 
   return {

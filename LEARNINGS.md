@@ -64,3 +64,18 @@ those questions counted as already finished: open one, press done, win, having d
 nothing. Keys are now built from sorted term signatures. The mutation that revealed it was
 one the suite initially failed to catch, which is why "a question that starts already
 finished" is now its own assertion.
+
+## 2026-09-06 — A refused button teaches nothing about a mistake she never made
+Wrong moves were refused with an explanation and the line left untouched. That is good for
+not punishing, but it means the classic errors were only ever *described*. The fix is the
+predict step: after choosing a move, she picks what it turns into from the correct line and
+the ones the named traps produce — x² + 25, 7x⁴, 7x⁵, 7 − 2x − 5. She has to look at the
+wrong answer and reject it. This came out of the Fable review, which called it the single
+biggest lever between modelling and drilling, and it was right.
+
+## 2026-09-06 — Saying a thing in the report does not make it true in the code
+I told Falk the score was "steps you found yourself". The code called `submit(true)`
+unconditionally, so score and streak meant nothing in that app. Likewise I claimed the
+questions were interleaved while Mixed was a flat concatenation of pools — brackets being
+the biggest pool, it was brackets-heavy. Both were found by a reviewer reading the code
+against my own description of it. Check claims against the source before making them.

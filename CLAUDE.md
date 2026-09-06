@@ -21,9 +21,16 @@ given, and a wrong answer always shows the right one.
 - Comments in English. Conventional Commits.
 
 ## Testing
-`node tools/check-engine.mjs` exercises the algebra parser. Before trusting any new
-assertion in it, break the thing it covers and watch it fail — a green test that has never
-been seen red covers nothing.
+- `node tools/check-engine.mjs` — the algebra parser in `shared/engine.js`.
+- `node tools/check-algebra.mjs [samples]` — plays every generator in `shared/problems.js`
+  through `shared/algebra.js` and asserts seven things: no dead ends, value preserved at
+  every step, goal reachable, refused moves leaving the line untouched, nothing thrown, the
+  problem not already finished when it starts, and the end state genuinely finished judged
+  by code written independently of `isSimplified`.
+
+Before trusting any new assertion, break the thing it covers and watch it fail. Seventeen
+mutations have been bitten so far; two real defects were found only because a mutation
+that should have gone red did not.
 
 ## Adding an app
 1. Copy an `apps/*.html` file.

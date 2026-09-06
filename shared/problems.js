@@ -300,6 +300,37 @@ const Problems = (() => {
                        b: { k: 'f', num: [T(rnd(2, 5), { [x]: 1 })], den: [T(rnd(2, 6))] } }] };
   };
 
+
+  /** x/2 · 4/x — cancels before multiplying, which is the whole point of looking first. */
+  const fracMultiplyCancelFirst = () => {
+    const x = V();
+    const k = rnd(2, 5);
+    return { type: 'Multiply fractions', goal: 'fracarith',
+             items: [{ k: 'x', op: '*',
+                       a: { k: 'f', num: [T(1, { [x]: 1 })], den: [T(k)] },
+                       b: { k: 'f', num: [T(k * rnd(2, 4))], den: [T(1, { [x]: 1 })] } }] };
+  };
+
+  /** Written out of order on purpose: 5x + x² + 6 is the same trinomial. */
+  const factorTrinomialShuffled = () => {
+    const x = V();
+    let m, n;
+    do { m = rndNonZero(-6, 6); n = rndNonZero(-6, 6); } while (m + n === 0);
+    return { type: 'Split the middle', goal: 'factor',
+             items: shuffle([T(1, { [x]: 2 }), T(m + n, { [x]: 1 }), T(m * n)]) };
+  };
+
+  /** A fraction that DOES contain an openable bracket, so "do not open" is a real temptation. */
+  const fracWithTemptingBracket = () => {
+    const x = V();
+    const n = rnd(2, 7);
+    const k = rnd(2, 4);
+    return { type: 'Cancel it down', goal: 'fraction',
+             items: [{ k: 'f',
+                       num: [{ k: 'b', m: T(k), ts: [T(1, { [x]: 1 }), T(n)] }],
+                       den: [{ k: 'b', m: T(1), ts: [T(1, { [x]: 1 }), T(n)] }] }] };
+  };
+
   /* ---------------- pools ---------------- */
 
   const BRACKETS = [expandSimple, expandTermMultiplier, minusBracket, minusBracketBoth,
@@ -308,10 +339,21 @@ const Problems = (() => {
   const POWERS = [powerMultiply, powerMultiplyCoeffs, powerTwoLetters, powerThenCollect,
                   powerDivide, powerDivideCoeffs, powerZero, powerOfPower, powerOfPowerCoeff];
   const COLLECT = [collectOnly, collectTwoLetters];
-  const FACTOR = [factorCommon, factorCommonNumber, factorDifferenceOfSquares, factorTrinomial];
-  const FRACTIONS = [fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon, fracFlipSign];
-  const FRACTION_SUMS = [fracAdd, fracSubtract, fracMultiply, fracDivide];
-  const EVERYTHING = [...BRACKETS, ...POWERS, ...COLLECT, ...FACTOR, ...FRACTIONS, ...FRACTION_SUMS];
+  const FACTOR = [factorCommon, factorCommonNumber, factorDifferenceOfSquares,
+                  factorTrinomial, factorTrinomialShuffled];
+  const FRACTIONS = [fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon,
+                     fracFlipSign, fracWithTemptingBracket];
+  const FRACTION_SUMS = [fracAdd, fracSubtract, fracMultiply, fracDivide, fracMultiplyCancelFirst];
+  const FAMILIES = [BRACKETS, POWERS, COLLECT, FACTOR, FRACTIONS, FRACTION_SUMS];
+
+  /**
+   * Mixed picks a FAMILY first, then a question from it. A flat concatenation is not
+   * interleaving — it just makes the biggest family the most likely, and brackets are
+   * twice the size of everything else.
+   */
+  const mixed = () => pick(pick(FAMILIES))();
+
+  const EVERYTHING = [mixed];
 
   // named, so the test report can say which family broke
   const ALL = {
@@ -323,7 +365,9 @@ const Problems = (() => {
     fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon, fracFlipSign,
     powerDivide, powerDivideCoeffs, powerZero, powerOfPower, powerOfPowerCoeff,
     fracAdd, fracSubtract, fracMultiply, fracDivide,
+    fracMultiplyCancelFirst, factorTrinomialShuffled, fracWithTemptingBracket,
   };
 
-  return { BRACKETS, POWERS, COLLECT, FACTOR, FRACTIONS, FRACTION_SUMS, EVERYTHING, ALL };
+  return { BRACKETS, POWERS, COLLECT, FACTOR, FRACTIONS, FRACTION_SUMS,
+           FAMILIES, mixed, EVERYTHING, ALL };
 })();

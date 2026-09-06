@@ -22,17 +22,19 @@
 <script>
 MathLab.app('step-builder', {
   emoji: '🪜',
+  ownHints: true,          // this app has its own three-rung ladder
   title: 'Step Builder',
   tagline: 'You choose the move. The working writes itself.',
   blurb: 'Pick the next move, one step at a time, and build the whole solution.',
 
   build() {
-  const { pick, mathHTML } = MathLab;
-  const { cloneAll, MOVES, suggest, render, theFraction,
+  const { pick, shuffle, mathHTML } = MathLab;
+  const { cloneAll, MOVES, suggest, render, theFraction, predictions,
           reachedGoal, PALETTE, DONE_LABEL, notYet, bannedValues } = Algebra;
 
-  function makeRound(pool) {
+  function makeRound(pool, opts = {}) {
     const problem = pick(pool)();
+    const mixed = !!opts.mixed;
 
     // The banned values come from the bottom of the ORIGINAL fraction. That is the whole
     // point of them: they survive cancelling, and they are the marks people throw away.
@@ -54,6 +56,7 @@ MathLab.app('step-builder', {
         let hintRung = 0;
         let finished = false;
         let bannedMissed = false;
+        let badPredictions = 0;
 
         stage.innerHTML = `
           <p class="chip-label" data-type></p>
@@ -73,7 +76,9 @@ MathLab.app('step-builder', {
           stuck: stage.querySelector('[data-stuck]'),
         };
 
-        el.type.textContent = problem.type;
+        // In Mixed the label would name the move, which is exactly the decision she is
+        // supposed to be making. Deciding is the skill interleaving trains.
+        if (mixed) el.type.remove(); else el.type.textContent = problem.type;
 
         const say = (text, tone) => {
           el.why.className = 'why-line' + (tone ? ' ' + tone : '');
@@ -116,7 +121,13 @@ MathLab.app('step-builder', {
             return;
           }
 
-          const { next, why } = move.apply(items);
+          const guess = predictions(key, items);
+          if (guess) { predict(key, guess); return; }
+          applyMove(key);
+        }
+
+        function applyMove(key) {
+          const { next, why } = MOVES[key].apply(items);
           items = next;
           lines.push(render(items));
           paint();
@@ -127,6 +138,41 @@ MathLab.app('step-builder', {
           } else {
             say(why, 'good');
           }
+        }
+
+        /* Right move chosen — now what does it actually give? The wrong options are the
+           real mistakes, so she has to look at x² + 25 and turn it down. */
+        function predict(key, guess) {
+          el.moves.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+
+          const box = document.createElement('div');
+          box.className = 'predict';
+          box.innerHTML = '<b>' + MOVES[key].label + ' — so what does that give?</b>' +
+                          '<div class="options" data-guess></div>';
+          const holder = box.querySelector('[data-guess]');
+
+          for (const opt of shuffle(guess.options.slice())) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'option';
+            b.innerHTML = mathHTML(opt.text);
+            b.addEventListener('click', () => {
+              if (opt.ok) {
+                b.classList.add('hit');
+                box.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+                setTimeout(() => { box.remove(); applyMove(key); }, 420);
+              } else {
+                badPredictions += 1;
+                b.classList.add('miss');
+                b.disabled = true;
+                say(opt.why, 'bad');
+              }
+            });
+            holder.appendChild(b);
+          }
+
+          el.moves.insertAdjacentElement('beforebegin', box);
+          say('Pick the line it turns into.');
         }
 
         function claimDone() {
@@ -216,7 +262,7 @@ MathLab.app('step-builder', {
 
         function settle() {
           const steps = lines.length - 1;
-          const clean = wrongMoves === 0 && hintRung < 3 && !bannedMissed;
+          const clean = wrongMoves === 0 && hintRung < 3 && !bannedMissed && badPredictions === 0;
 
           const answer = lines.join('  =  ') +
             (asksBanned ? ',   ' + banned.values.map((v) => banned.letter + ' ≠ ' + v).join(', ') : '');
@@ -230,7 +276,12 @@ MathLab.app('step-builder', {
             (clean ? ' · found every move yourself ⭐️' : ' · finished it') + '</p>';
           stage.appendChild(bridge);
 
-          submit(true);   // finishing is the win; wrong turns on the way cost nothing
+          // Finishing is always the win — that is deliberate, and it is why `correct` is
+          // true whatever happened. What varies is the points, which score the process:
+          // wrong turns, hints and wrong predictions each cost, with a floor so a messy
+          // round still pays something.
+          const points = Math.max(4, 20 - 3 * wrongMoves - 2 * hintRung - 3 * badPredictions - (bannedMissed ? 3 : 0));
+          submit(true, points);
 
           // The next-question button sits below the card, which on a phone is off-screen —
           // and an off-screen button reads as a dead end. Bring it into view.
@@ -244,9 +295,14 @@ MathLab.app('step-builder', {
           hintRung = Math.min(hintRung + 1, 3);
 
           if (hintRung === 1) {
-            say(theFraction(items)
+            const has = (k) => items.some((i) => i.k === k);
+            say(theFraction(items) || items.filter((i) => i.k === 'f').length
               ? 'It is a fraction. That changes everything — do <b>not</b> open brackets here.'
-              : 'Look at the whole line first. A bracket always goes before anything else.');
+              : has('x') ? 'Two fractions, side by side. Get them into one first.'
+              : has('b') || has('p') ? 'Look at the whole line first. A bracket always goes before anything else.'
+              : has('m') || has('d') || has('e') ? 'Something is being multiplied, divided or raised to a power. There is a rule for that.'
+              : problem.goal === 'factor' ? 'You are going the other way this time — towards brackets, not away from them.'
+              : 'No brackets here. So it is about shapes: which ones match?');
             return;
           }
 
@@ -276,7 +332,7 @@ MathLab.app('step-builder', {
   }
 
   return [
-    { name: 'Mixed', make: () => makeRound(Problems.EVERYTHING) },
+    { name: 'Mixed', make: () => makeRound(Problems.EVERYTHING, { mixed: true }) },
     { name: 'Brackets', make: () => makeRound(Problems.BRACKETS) },
     { name: 'Powers', make: () => makeRound(Problems.POWERS) },
     { name: 'Collecting', make: () => makeRound(Problems.COLLECT) },

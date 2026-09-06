@@ -214,9 +214,11 @@ const Algebra = (() => {
                why: 'A square minus a square is always (first + second)(first − second).' };
     }
 
-    // 3 — x² + px + q, split by two numbers that add to p and multiply to q
+    // 3 — x² + px + q, split by two numbers that add to p and multiply to q.
+    //     Sorted by degree first: "5x + x² + 6" is the same trinomial as "x² + 5x + 6".
     if (terms.length === 3) {
-      const [q2, q1, q0] = terms;
+      const deg = (x) => Math.max(0, ...Object.values(x.v), 0);
+      const [q2, q1, q0] = [...terms].sort((x, y) => deg(y) - deg(x));
       const vs = Object.keys(q2.v);
       const middleOnlyThatLetter = Object.keys(q1.v).length === 1 && q1.v[vs[0]] === 1;
       if (q2.c === 1 && vs.length === 1 && q2.v[vs[0]] === 2 && middleOnlyThatLetter && isConst(q0)) {
@@ -366,7 +368,10 @@ const Algebra = (() => {
 
     if (it.k === 'm') {
       merged = mulAll(it.fs);
-      why = 'Multiplying powers of the same letter <b>adds</b> the small numbers: ' +
+      const coeffs = it.fs.map((f) => Math.abs(f.c));
+      const product = coeffs.reduce((a, b) => a * b, 1);
+      why = 'The numbers in front <b>multiply</b> (' + coeffs.join(' × ') + ' = ' + product +
+            ') and the small numbers <b>add</b>: ' +
             it.fs.map((f) => fmt(f, false)).join(' · ') + ' = ' + fmt(merged, false) + '.';
     } else if (it.k === 'd') {
       merged = divTerm(it.a, it.b);
@@ -621,6 +626,109 @@ const Algebra = (() => {
     },
   };
 
+  /* ================= predict the result =================
+     Before the line advances, offer what the move gives alongside what the classic
+     mistakes give. A refused button teaches nothing about a mistake she never made;
+     seeing x² + 25 and having to reject it is the whole point. Each wrong option is
+     one of the named traps from the wall chart. */
+
+  const asLine = (items) => render(items);
+
+  function predictions(key, items) {
+    const correct = MOVES[key].apply(items).next;
+    const wrong = [];
+    const add = (list, why) => { if (list) wrong.push({ items: list, why }); };
+
+    if (key === 'open') {
+      const at = find(items, 'p') !== -1 ? find(items, 'p') : find(items, 'b');
+      const it = items[at];
+      const rest = (mid) => [...items.slice(0, at), ...mid, ...items.slice(at + 1)];
+
+      if (it.k === 'p') {
+        // (x + 5)² = x² + 25 — the cross terms forgotten
+        const ends = [mulTerm(it.a[0], it.b[0]), mulTerm(it.a[it.a.length - 1], it.b[it.b.length - 1])];
+        add(rest(scale(collect(ends), it.m)),
+            'Only the ends were multiplied. Every term in the first bracket has to meet ' +
+            '<b>every</b> term in the second — the middle bit is what goes missing.');
+      } else if (isConst(it.m) && it.m.c === -1) {
+        // 7 - (2x - 5) = 7 - 2x - 5 — only the first sign flipped
+        const half = it.ts.map((x, i) => (i === 0 ? T(-x.c, x.v) : cloneTerm(x)));
+        add(rest(half), 'Only the first sign was flipped. A minus in front flips <b>every</b> term inside.');
+      } else {
+        // 3(x + 4) = 3x + 4 — the multiplier reached only the first term
+        const half = it.ts.map((x, i) => (i === 0 ? mulTerm(x, it.m) : cloneTerm(x)));
+        add(rest(half), 'The number outside only reached the first term. It touches <b>everything</b> inside.');
+      }
+    }
+
+    if (key === 'join') {
+      const terms = items.filter((x) => x.k === 't');
+      const others = items.filter((x) => x.k !== 't');
+      const at = new Map();
+      const bumped = [];
+      for (const x of terms) {
+        const s = sig(x);
+        if (at.has(s)) {
+          const slot = at.get(s);
+          const v = {};
+          for (const k of Object.keys(bumped[slot].v)) v[k] = bumped[slot].v[k] * 2;
+          bumped[slot] = T(bumped[slot].c + x.c, v);          // 3x² + 4x² = 7x⁴
+        } else { at.set(s, bumped.length); bumped.push(cloneTerm(x)); }
+      }
+      add([...bumped.filter((x) => x.c !== 0), ...others],
+          'Adding never changes the power. You are counting shapes: 3 squares and 4 squares ' +
+          'are 7 squares, not 7 of something else.');
+    }
+
+    if (key === 'power') {
+      const at = items.findIndex((x) => POWER_KINDS.includes(x.k));
+      const it = items[at];
+      const rest = (one) => [...items.slice(0, at), one, ...items.slice(at + 1)];
+
+      if (it.k === 'm') {
+        const merged = mulAll(it.fs);
+        // 3x² · 4x³ = 7x⁵ — the numbers in front added instead of multiplied
+        const added = T(it.fs.reduce((c, f) => c + f.c, 0), { ...merged.v });
+        if (added.c !== merged.c) add(rest(added), 'The numbers in front <b>multiply</b>. Only the small numbers add.');
+        // x² · x³ = x⁶ — exponents multiplied instead of added
+        const v = {};
+        for (const k of Object.keys(merged.v)) v[k] = it.fs.reduce((a, f) => a * (f.v[k] || 1), 1);
+        const times = T(merged.c, v);
+        if (asLine([times]) !== asLine([merged])) add(rest(times),
+          'Multiplying powers <b>adds</b> the small numbers. Multiplying them is the rule for a power of a power.');
+      } else if (it.k === 'd') {
+        const merged = divTerm(it.a, it.b);
+        const v = {};
+        for (const k of Object.keys(it.a.v)) {
+          const q = (it.a.v[k] || 0) / (it.b.v[k] || 1);
+          if (Number.isInteger(q) && q !== 0) v[k] = q;
+        }
+        const divided = T(merged.c, v);
+        if (asLine([divided]) !== asLine([merged])) add(rest(divided),
+          'Dividing <b>subtracts</b> the small numbers. It never divides them.');
+      } else {
+        const merged = powTerm(it.base, it.n);
+        const v = {};
+        for (const k of Object.keys(it.base.v)) v[k] = it.base.v[k] + it.n;
+        const added = T(merged.c, v);
+        if (asLine([added]) !== asLine([merged])) add(rest(added),
+          'A power of a power <b>multiplies</b> the small numbers. Adding is the rule for multiplying.');
+      }
+    }
+
+    const correctLine = asLine(correct);
+    const seen = new Set([correctLine]);
+    const options = [{ text: correctLine, ok: true }];
+    for (const w of wrong) {
+      const line = asLine(w.items);
+      if (seen.has(line)) continue;
+      seen.add(line);
+      options.push({ text: line, ok: false, why: w.why });
+    }
+
+    return options.length >= 2 ? { correct, options } : null;
+  }
+
   /* ================= goals ================= */
 
   function isSimplified(items) {
@@ -757,7 +865,7 @@ const Algebra = (() => {
   return {
     T, cloneAll, mulTerm, divTerm, powTerm, mulSums, collect, sig, isConst, gcdAll, lcm,
     render, renderItemAbs, fmt, fmtSum,
-    MOVES, isSimplified, suggest, factorisation, theFraction, negatedPair, cancellable,
+    MOVES, predictions, isSimplified, suggest, factorisation, theFraction, negatedPair, cancellable,
     isProduct, fullyFactored, reachedGoal, PALETTE, DONE_LABEL, notYet, bannedValues,
     evaluate, varsUsed,
   };

@@ -14,6 +14,12 @@
  *   5. REAL QUESTION    — the problem is not already solved before the student starts.
  *   6. FULLY FINISHED   — the end state really is finished, judged independently of
  *                         Algebra.isSimplified so a lenient finish test is caught.
+ *   7. TAUGHT THE POINT — a cancelling question actually cancelled; a fraction sum
+ *                         ended as one fraction.
+ *
+ * Domain is deliberately NOT checked here: valueAt skips poles, so a cancel that
+ * changes the allowed values of x is invisible to this file by design. Banned
+ * values are asserted in the app instead, from the ORIGINAL denominator.
  *
  * It also drives every OTHER move at every step — the ones a student would press by
  * mistake — to prove a refused move leaves the line untouched rather than half-applying.
@@ -117,7 +123,7 @@ function residualWork(goal, items) {
     seen.add(s);
   }
   for (const it of items) {
-    if (['b', 'p', 'm', 'd', 'e', 'x'].includes(it.k)) return 'an unresolved ' + it.k + ' item is left';
+    if (['b', 'p', 'm', 'd', 'e', 'x', 'f'].includes(it.k)) return 'an unresolved ' + it.k + ' item is left';
   }
   return null;
 }
@@ -137,6 +143,7 @@ for (const [name, generator] of Object.entries(Problems.ALL)) {
     const startLine = Algebra.render(items);
     const vars = Algebra.varsUsed(items);
     let steps = 0;
+    const used = [];
 
     // 5. A question that is already finished is a broken question — the student presses
     //    "done" and wins having done nothing. This is neither a dead end nor a value
@@ -190,6 +197,7 @@ for (const [name, generator] of Object.entries(Problems.ALL)) {
           break;
         }
 
+        used.push(key);
         items = next;
         Algebra.render(items);          // must not throw on any reachable state
 
@@ -198,6 +206,15 @@ for (const [name, generator] of Object.entries(Problems.ALL)) {
           break;
         }
       }
+      // 7. Route-specific: a cancelling question that never cancelled did not teach the
+      //    thing it exists to teach, even if the end state looks tidy.
+      if (goal === 'fraction' && !used.includes('cancel')) {
+        fail(name, 'FRACTION FINISHED WITHOUT CANCELLING', { start: startLine, final: Algebra.render(items), used: used.join(' → ') });
+      }
+      if (goal === 'fracarith' && items.filter((i) => i.k === 'f').length > 1) {
+        fail(name, 'STILL TWO FRACTIONS', { start: startLine, final: Algebra.render(items) });
+      }
+
       const left = residualWork(goal, items);
       if (left) {
         fail(name, 'NOT FULLY FINISHED', { start: startLine, final: Algebra.render(items), left });
