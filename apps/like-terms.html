@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Like Terms Hunt · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🧲 Like Terms Hunt</h1>
+    <p class="tagline">Terms are "like" when their letters and powers match exactly.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script>
+(() => {
+  const { rnd, rndNonZero, pick, sample, shuffle, formatTerm, formatSum, signature } = MathLab;
+
+  const FAMILIES = [['x', 'y'], ['p', 'q'], ['a', 'b'], ['m', 'n']];
+
+  /** All the variable shapes a term can take for one letter pair. */
+  const shapesFor = ([u, v]) => [
+    {},
+    { [u]: 1 }, { [v]: 1 },
+    { [u]: 2 }, { [v]: 2 },
+    { [u]: 1, [v]: 1 },
+    { [u]: 2, [v]: 1 }, { [u]: 1, [v]: 2 },
+    { [u]: 3 },
+  ];
+
+  const term = (vars) => ({ coeff: rndNonZero(-6, 8), vars });
+
+  /* ---- Level 1: tap every term like the glowing one ---- */
+
+  function spotRound() {
+    const shapes = shuffle(shapesFor(pick(FAMILIES)));
+    const targetShape = shapes[0];
+    const likeCount = rnd(1, 3);
+    const decoyShapes = sample(shapes.slice(1), rnd(3, 4));
+
+    const target = term(targetShape);
+    const likes = Array.from({ length: likeCount }, () => term(targetShape));
+    const decoys = decoyShapes.map(term);
+
+    const others = shuffle([...likes, ...decoys]);
+    const wanted = new Set(others.map((t, i) => (signature(t) === signature(target) ? i : -1))
+                                 .filter((i) => i >= 0));
+
+    return {
+      prompt: 'Tap every term that is <b>like</b> the glowing one, then press Check.',
+      question: '',
+      hint: 'Same letters <i>and</i> same powers. The number in front does not matter — ' +
+            '3<i class="var">pq</i> and −7<i class="var">pq</i> are like terms.',
+      solution: likes.map((t) => formatTerm(t)).join(', '),
+
+      mount(stage, submit) {
+        const chosen = new Set();
+
+        const targetRow = document.createElement('div');
+        targetRow.className = 'chips';
+        targetRow.style.marginBottom = '18px';
+        const targetChip = document.createElement('span');
+        targetChip.className = 'chip target';
+        targetChip.innerHTML = MathLab.mathHTML(formatTerm(target));
+        targetRow.appendChild(targetChip);
+
+        const row = document.createElement('div');
+        row.className = 'chips';
+
+        const buttons = others.map((t, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'chip';
+          b.setAttribute('aria-pressed', 'false');
+          b.innerHTML = MathLab.mathHTML(formatTerm(t));
+          b.addEventListener('click', () => {
+            if (chosen.has(i)) chosen.delete(i); else chosen.add(i);
+            b.setAttribute('aria-pressed', String(chosen.has(i)));
+          });
+          row.appendChild(b);
+          return b;
+        });
+
+        const actions = document.createElement('div');
+        actions.className = 'answer-row';
+        const check = document.createElement('button');
+        check.type = 'button';
+        check.textContent = 'Check';
+        actions.appendChild(check);
+
+        check.addEventListener('click', () => {
+          const correct = chosen.size === wanted.size && [...chosen].every((i) => wanted.has(i));
+          buttons.forEach((b, i) => {
+            b.disabled = true;
+            if (wanted.has(i)) b.classList.add('hit');
+            else if (chosen.has(i)) b.classList.add('miss');
+          });
+          check.disabled = true;
+          submit(correct);
+        });
+
+        stage.append(targetRow, row, actions);
+      },
+    };
+  }
+
+  /* ---- Levels 2 & 3: collect the like terms and type the answer ---- */
+
+  function collectRound({ groups, perGroup }) {
+    const shapes = shuffle(shapesFor(pick(FAMILIES))).slice(0, groups);
+
+    const terms = [];
+    const totals = [];
+
+    for (const vars of shapes) {
+      const count = rnd(perGroup[0], perGroup[1]);
+      let sum = 0;
+      for (let i = 0; i < count; i++) {
+        const t = term(vars);
+        terms.push(t);
+        sum += t.coeff;
+      }
+      if (sum !== 0) totals.push({ coeff: sum, vars });
+    }
+
+    if (!totals.length) return collectRound({ groups, perGroup });   // everything cancelled — redraw
+
+    const shown = shuffle(terms);
+    const answer = formatSum(totals);
+
+    return {
+      prompt: 'Collect the like terms:',
+      question: MathLab.mathHTML(formatSum(shown)),
+      hint: 'Group the matching terms first, then add their numbers. ' +
+            'Keep the letter part exactly the same.',
+      solution: answer,
+
+      mount(stage, submit) {
+        MathLab.textAnswer(stage, submit, {
+          placeholder: 'e.g. 6pq',
+          check: (raw) => MathLab.sameExpression(raw, answer),
+        });
+      },
+    };
+  }
+
+  MathLab.createGame({
+    key: 'like-terms',
+    levels: [
+      { name: '① Spot them', make: spotRound },
+      { name: '② Collect them', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
+      { name: '③ Two groups', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
+    ],
+  });
+})();
+</script>
+</body>
+</html>

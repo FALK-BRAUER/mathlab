@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substitution Machine · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🔢 Substitution Machine</h1>
+    <p class="tagline">Swap the letters for their numbers, then work it out.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script>
+(() => {
+  const { rnd, rndNonZero, pick, mathHTML, sup } = MathLab;
+
+  const FAMILIES = [
+    ['k', 'l', 'm'],
+    ['a', 'b', 'c'],
+    ['p', 'q', 'r'],
+    ['d', 'e', 'f'],
+  ];
+
+  /** "k = 3" chips for the given-values strip. */
+  const givens = (names, vals) => names.map((n) => n + ' = ' + vals[n]);
+
+  /** Accepts 7, -7, 3.5 or 7/2. */
+  function numericCheck(want) {
+    return (raw) => {
+      const s = raw.replace(/\s+/g, '').replace(/[−–—]/g, '-');
+      let val;
+      if (/^-?\d+\/-?\d+$/.test(s)) {
+        const [a, b] = s.split('/').map(Number);
+        if (b === 0) return false;
+        val = a / b;
+      } else if (/^-?\d*\.?\d+$/.test(s)) {
+        val = Number(s);
+      } else {
+        return false;
+      }
+      return Math.abs(val - want) < 1e-9;
+    };
+  }
+
+  const round = (parts) => ({
+    ...parts,
+    mount(stage, submit) {
+      MathLab.textAnswer(stage, submit, { check: numericCheck(parts.value), placeholder: 'number' });
+    },
+  });
+
+  /* ---- Level 1: pure products, e.g. klm or 3ab ---- */
+
+  function productRound() {
+    const [x, y, z] = pick(FAMILIES);
+    const vals = { [x]: rndNonZero(-6, 8), [y]: rndNonZero(-6, 8), [z]: rndNonZero(-6, 8) };
+    const useThird = Math.random() < 0.5;
+    const coeff = pick([1, 1, 2, 3, 4]);
+
+    const names = useThird ? [x, y, z] : [x, y];
+    const shown = coeff === 1 ? names.join('') : coeff + names.join('');
+    const value = names.reduce((acc, n) => acc * vals[n], coeff);
+
+    return round({
+      prompt: 'Find the value of:',
+      question: mathHTML(shown),
+      given: givens(useThird ? [x, y, z] : [x, y], vals),
+      value,
+      solution: String(value),
+      hint: 'Replace each letter with its number, then multiply. Two negatives multiply to a positive.',
+    });
+  }
+
+  /* ---- Level 2: sums and differences, e.g. 8km − 2l ---- */
+
+  function mixedRound() {
+    const [x, y, z] = pick(FAMILIES);
+    const vals = { [x]: rndNonZero(-5, 7), [y]: rndNonZero(-5, 7), [z]: rndNonZero(-5, 7) };
+
+    const c1 = rnd(2, 9);
+    const c2 = rnd(2, 9);
+    const minus = Math.random() < 0.6;
+
+    const first = c1 * vals[x] * vals[y];
+    const second = c2 * vals[z];
+    const value = minus ? first - second : first + second;
+
+    const question = mathHTML(c1 + x + y) + (minus ? ' − ' : ' + ') + mathHTML(c2 + z);
+
+    return round({
+      prompt: 'Find the value of:',
+      question,
+      given: givens([x, y, z], vals),
+      value,
+      solution: String(value),
+      hint: 'Do each part on its own first, then subtract or add. ' +
+            c1 + '<i class="var">' + x + '</i><i class="var">' + y + '</i> means ' +
+            c1 + ' × ' + vals[x] + ' × ' + vals[y] + '.',
+    });
+  }
+
+  /* ---- Level 3: fractions, built so the answer stays a whole number ---- */
+
+  const frac = (num, den) =>
+    '<span class="frac"><span class="num">' + num + '</span><span class="den">' + den + '</span></span>';
+
+  /** (p + q + r) ÷ (p − r), with q chosen so it divides exactly. */
+  function sumOverDifference() {
+    const [x, y, z] = pick(FAMILIES);
+    let vx, vz, den, k, vy;
+    do {
+      vx = rndNonZero(-6, 8);
+      vz = rndNonZero(-6, 8);
+      den = vx - vz;
+      k = rndNonZero(-4, 4);
+      vy = k * den - vx - vz;
+    } while (den === 0 || vy === 0 || Math.abs(vy) > 40);
+
+    const vals = { [x]: vx, [y]: vy, [z]: vz };
+
+    return round({
+      prompt: 'Find the value of:',
+      question: frac(mathHTML(x + ' + ' + y + ' + ' + z), mathHTML(x + ' − ' + z)),
+      given: givens([x, y, z], vals),
+      value: k,
+      solution: String(k),
+      hint: 'Work out the top and the bottom separately, then divide. Top = ' +
+            vx + ' + ' + vy + ' + ' + vz + '.',
+    });
+  }
+
+  /** c·q ÷ (p + r), with q a multiple of (p + r). */
+  function multipleOverSum() {
+    const [x, y, z] = pick(FAMILIES);
+    let s, vx, vz, k, vy;
+    do {
+      s = rndNonZero(-7, 7);
+      vx = rndNonZero(-6, 8);
+      vz = s - vx;
+      k = rndNonZero(-3, 3);
+      vy = k * s;
+    } while (vz === 0 || Math.abs(vy) > 30);
+
+    const c = pick([2, 4, 8]);
+    const vals = { [x]: vx, [y]: vy, [z]: vz };
+    const value = c * k;
+
+    return round({
+      prompt: 'Find the value of:',
+      question: frac(mathHTML(c + y), mathHTML(x + ' + ' + z)),
+      given: givens([x, y, z], vals),
+      value,
+      solution: String(value),
+      hint: 'Bottom first: ' + vx + ' + ' + vz + ' = ' + s +
+            '. Then divide the top by it.',
+    });
+  }
+
+  MathLab.createGame({
+    key: 'substitution',
+    levels: [
+      { name: '① Products', make: productRound },
+      { name: '② Mix it up', make: mixedRound },
+      { name: '③ Fractions', make: () => (Math.random() < 0.5 ? sumOverDifference() : multipleOverSum()) },
+    ],
+  });
+})();
+</script>
+</body>
+</html>
