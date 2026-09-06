@@ -201,5 +201,33 @@ ${registrations}
 mkdirSync(join(root, 'dist'), { recursive: true });
 writeFileSync(join(root, 'dist', 'mathlab.html'), page);
 
-console.log(`dist/mathlab.html  ${(page.length / 1024).toFixed(1)} KB`);
+/*
+ * Two outputs, because they are consumed differently:
+ *
+ *  dist/mathlab.html   headless — the Artifact publisher wraps it in its own
+ *                      <html><head> with charset and viewport.
+ *  dist/index.html     a whole document, for serving over the LAN or Tailscale.
+ *
+ * Without the second one a phone loading the LAN URL gets no viewport meta, falls back
+ * to a 980px layout viewport, and every mobile media query silently fails to fire — the
+ * page renders as a shrunken desktop. Same bytes, different envelope.
+ */
+const standalone = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+${page}
+</body>
+</html>
+`;
+
+writeFileSync(join(root, 'dist', 'index.html'), standalone);
+
+console.log(`dist/mathlab.html  ${(page.length / 1024).toFixed(1)} KB   (for publishing)`);
+console.log(`dist/index.html    ${(standalone.length / 1024).toFixed(1)} KB   (for serving)`);
 console.log(`apps bundled: ${appFiles.join(', ')}`);

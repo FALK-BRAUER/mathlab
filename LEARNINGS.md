@@ -79,3 +79,13 @@ unconditionally, so score and streak meant nothing in that app. Likewise I claim
 questions were interleaved while Mixed was a flat concatenation of pools — brackets being
 the biggest pool, it was brackets-heavy. Both were found by a reviewer reading the code
 against my own description of it. Check claims against the source before making them.
+
+## 2026-09-06 — The publishable build and the servable build are not the same file
+`dist/mathlab.html` is written headless on purpose: the Artifact publisher supplies the
+`<html><head>` with charset and viewport. Served directly over the LAN that file has no
+viewport meta at all, so mobile Chrome falls back to a 980px layout viewport and every
+mobile media query silently fails — the phone gets a shrunken desktop and nothing looks
+broken enough to point at. `bundle.mjs` now also writes `dist/index.html`, the same bytes
+inside a real document, and that is the URL to serve. Measured under device emulation, not
+by squinting at a narrow window: Chrome clamps a real window at 500px wide, so resizing the
+window never actually tested a phone.

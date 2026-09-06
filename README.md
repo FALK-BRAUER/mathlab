@@ -16,7 +16,7 @@ Rebuild it and republish to the same URL after changing any app.
 
 **On the tailnet** (iPad, phone, MacBook — any device signed into Tailscale):
 
-> https://falks-mac-mini-2.tail31e524.ts.net:10200/
+> https://falks-mac-mini-2.tail31e524.ts.net:10200/dist/index.html
 
 Real HTTPS, no port-forwarding, tailnet only — never exposed to the public internet.
 The Mac mini serves it via `tools/serve.sh` (bound to `127.0.0.1`) with Tailscale

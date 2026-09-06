@@ -688,3 +688,74 @@ button.option:disabled { opacity: 1; }
 
 .predict .options { gap: 8px; }
 .predict button.option { font-size: 1.15rem; padding: 13px 18px; }
+
+/* ==================================================================
+   Phones. Measured at 390–500px: the level picker wrapped to two or
+   three rows and the scoreboard took another 64px, so 44% of the
+   screen was gone before any maths appeared, and every tap target was
+   35–37px against the 44px guideline. The maths is the point; the
+   chrome around it gets out of the way.
+   ================================================================== */
+
+@media (max-width: 620px) {
+  .wrap { padding: 12px 14px 56px; }
+
+  .topbar { gap: 8px; margin-bottom: 12px; }
+  .topbar h1 { font-size: 1.15rem; }
+  .topbar .tagline { font-size: .88rem; }
+
+  /* one swipeable row instead of three stacked ones */
+  .levels {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* No full-bleed negative margin: it makes the strip wider than the viewport, and the
+       whole page then scrolls sideways instead of just the strip. */
+    margin: 0 0 12px;
+    padding: 2px 0 6px;
+  }
+
+  .levels::-webkit-scrollbar { display: none; }
+
+  .levels button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    min-height: 44px;
+  }
+
+  /* the score is not the point — keep it, shrink it */
+  .scoreboard { gap: 6px; margin-bottom: 12px; }
+  .stat { padding: 7px 8px; }
+  .stat b { font-size: 1.15rem; }
+  .stat span { font-size: .6rem; letter-spacing: .06em; }
+
+  .card { padding: 16px 15px; }
+  .prompt { font-size: .98rem; }
+
+  /* everything you tap clears 44px */
+  button,
+  .back { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; }
+  .chip { min-height: 44px; display: inline-flex; align-items: center; }
+  button.move { width: 100%; }
+  .moves { gap: 8px; }
+
+  ol.working li { font-size: 1.15rem; padding: 4px 10px; }
+  ol.working li.now { font-size: clamp(1.4rem, 7vw, 1.9rem); }
+
+  .bridge, .banned, .predict, .idea { padding: 14px 16px; }
+  .bridge .written { font-size: 1.05rem; }
+
+  .feedback, .hint { padding: 13px 16px; }
+  .answer-row { margin-top: 14px; }
+  input[type="text"] { font-size: 1.25rem; min-height: 48px; }
+}
+
+/* very narrow: give the maths every pixel it can have */
+@media (max-width: 400px) {
+  .wrap { padding: 10px 12px 56px; }
+  .stat b { font-size: 1rem; }
+  .question { font-size: clamp(1.45rem, 8vw, 1.9rem); }
+  button.option { font-size: 1.05rem; padding: 13px 14px; }
+}
