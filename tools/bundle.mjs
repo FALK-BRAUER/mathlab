@@ -19,6 +19,8 @@ const read = (...p) => readFileSync(join(root, ...p), 'utf8');
 
 const css = read('shared', 'theme.css');
 const engine = read('shared', 'engine.js');
+const algebra = read('shared', 'algebra.js');
+const problems = read('shared', 'problems.js');
 
 /** Pull the `MathLab.app(...)` registration out of a standalone app page. */
 function registration(file) {
@@ -148,6 +150,14 @@ li.tile::after {
 
 <script>
 ${engine}
+</script>
+
+<script>
+${algebra}
+</script>
+
+<script>
+${problems}
 </script>
 
 <script>

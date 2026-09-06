@@ -152,9 +152,14 @@ const MathLab = (() => {
       .replace(/ ([+-])/g, ' $1 ');
   }
 
-  /** Italicise single letters so 2xy reads like a textbook. */
+  /**
+   * Italicise single letters so 2xy reads like a textbook.
+   * Skips anything inside a tag — fraction rendering hands us real markup, and
+   * italicising the letters in `<span class="frac">` destroys it.
+   */
   function mathHTML(text) {
-    return String(text).replace(/[a-z]/g, (c) => '<i class="var">' + c + '</i>');
+    return String(text).replace(/<[^>]*>|[a-z]/g, (m) =>
+      m.length > 1 ? m : '<i class="var">' + m + '</i>');
   }
 
   /* ---------------- progress ---------------- */

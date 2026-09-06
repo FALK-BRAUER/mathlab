@@ -33,3 +33,18 @@ a power silently "agreed". Caught only by feeding the detector known-wrong pairs
 noticing `3x² + 4x²` vs `7x⁴` was not flagged. The evaluator now throws on any non-finite
 result, so the failure cannot be silent again. Verify the detector on a known defect before
 trusting a clean run — a comparison that cannot fail is not a check.
+
+## 2026-09-06 — Rendering that returns HTML collides with helpers that rewrite text
+`Algebra.render` returns real markup for fractions. `MathLab.mathHTML` italicises every
+lowercase letter — including the ones inside `<span class="frac">` — so every fraction
+rendered as broken tag soup. Found only because a DOM-scraping test printed the raw string.
+`mathHTML` now skips anything inside a tag. Related: applying the operator-spacing regex to
+an already-rendered item double-spaced the contents of brackets, so `render` joins with
+explicit operators instead.
+
+## 2026-09-06 — Move the logic out of the page to make it testable
+The transformation engine and the question repertoire now live in `shared/algebra.js` and
+`shared/problems.js` rather than inside the app's `<script>`. That is what lets
+`tools/check-algebra.mjs` play thousands of problems in node in a second, instead of
+driving a browser. It found nothing the browser run had missed — but it is repeatable,
+fast, and mutation-bitten, which the browser run was not.
