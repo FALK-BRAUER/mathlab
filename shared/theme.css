@@ -589,3 +589,27 @@ button.move.done {
   font-weight: 700;
   color: var(--muted);
 }
+
+/* ---------- banned values: the second half of a fraction question ---------- */
+
+.banned {
+  background: var(--warn-soft);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.banned b {
+  display: block;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--warn);
+  margin-bottom: 6px;
+}
+
+.banned p { margin: 0 0 12px; font-size: .95rem; }
+.banned .chips { margin: 0; }
+.banned .chip { font-size: 1.1rem; padding: 8px 14px; }
+.banned .answer-row { margin-top: 14px; }
+.banned .why-line { margin: 10px 0 0; }

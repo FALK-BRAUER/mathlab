@@ -11,6 +11,9 @@
  *                         several points (poles skipped for fractions).
  *   3. GOAL REACHED     — following `suggest` always terminates at the goal.
  *   4. NOTHING THROWS   — no move, render or hint blows up on any reachable state.
+ *   5. REAL QUESTION    — the problem is not already solved before the student starts.
+ *   6. FULLY FINISHED   — the end state really is finished, judged independently of
+ *                         Algebra.isSimplified so a lenient finish test is caught.
  *
  * It also drives every OTHER move at every step — the ones a student would press by
  * mistake — to prove a refused move leaves the line untouched rather than half-applying.
@@ -65,6 +68,60 @@ function disagreement(before, after, vars) {
   return used === 0 ? { vals: null, was: null, now: null, note: 'no usable test point' } : null;
 }
 
+/**
+ * 6. FULLY FINISHED — written independently of Algebra.isSimplified, because the checker
+ *    uses isSimplified to decide when to stop, and so cannot otherwise notice that
+ *    isSimplified is too lenient. That is a real bug this project already shipped once:
+ *    9s^2 - 15s over 3s "finished" as 3s(3s - 5) over 3s.
+ */
+function residualWork(goal, items) {
+  const brText = (ts) => ts.map((x) => x.c + '|' + Algebra.sig(x)).sort().join(',');
+
+  const sideBlocks = (side) => {
+    if (side.length !== 1) return null;
+    const it = side[0];
+    if (it.k === 't') return { mul: it, brs: [] };
+    if (it.k === 'b') return { mul: it.m, brs: [it.ts] };
+    if (it.k === 'p') return { mul: it.m, brs: [it.a, it.b] };
+    return null;
+  };
+
+  const shareFactor = (a, b) => {
+    if (Algebra.gcdAll([a.c, b.c]) > 1) return true;
+    return Object.keys(a.v).some((k) => (b.v[k] || 0) > 0);
+  };
+
+  if (items.length === 1 && items[0].k === 'f') {
+    const f = items[0];
+    const n = sideBlocks(f.num), d = sideBlocks(f.den);
+    if (n && d) {
+      for (const a of n.brs) for (const b of d.brs) {
+        if (brText(a) === brText(b)) return 'a bracket is on both top and bottom';
+        if (brText(a) === brText(b.map((x) => ({ c: -x.c, v: x.v, k: 't' }))))
+          return 'top and bottom brackets are opposites';
+      }
+      if (shareFactor(n.mul, d.mul)) return 'top and bottom still share a factor';
+    }
+    return null;
+  }
+
+  if (goal === 'factor') {
+    return Algebra.isProduct(items) ? null : 'not written as a product';
+  }
+
+  const seen = new Set();
+  for (const it of items) {
+    if (it.k !== 't') continue;
+    const s = Algebra.sig(it);
+    if (seen.has(s)) return 'two terms still have the same shape';
+    seen.add(s);
+  }
+  for (const it of items) {
+    if (['b', 'p', 'm', 'd', 'e', 'x'].includes(it.k)) return 'an unresolved ' + it.k + ' item is left';
+  }
+  return null;
+}
+
 for (const [name, generator] of Object.entries(Problems.ALL)) {
   for (let s = 0; s < SAMPLES; s++) {
     let problem;
@@ -80,6 +137,14 @@ for (const [name, generator] of Object.entries(Problems.ALL)) {
     const startLine = Algebra.render(items);
     const vars = Algebra.varsUsed(items);
     let steps = 0;
+
+    // 5. A question that is already finished is a broken question — the student presses
+    //    "done" and wins having done nothing. This is neither a dead end nor a value
+    //    error, so it needs its own assertion.
+    if (Algebra.reachedGoal(goal, items)) {
+      fail(name, 'STARTS ALREADY FINISHED', { start: startLine, goal });
+      continue;
+    }
 
     try {
       while (!Algebra.reachedGoal(goal, items)) {
@@ -132,6 +197,10 @@ for (const [name, generator] of Object.entries(Problems.ALL)) {
           fail(name, 'did not terminate', { start: startLine, stuckAt: Algebra.render(items) });
           break;
         }
+      }
+      const left = residualWork(goal, items);
+      if (left) {
+        fail(name, 'NOT FULLY FINISHED', { start: startLine, final: Algebra.render(items), left });
       }
     } catch (e) {
       fail(name, 'THREW', { start: startLine, at: Algebra.render(items), err: String(e && e.stack || e) });

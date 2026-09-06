@@ -28,11 +28,16 @@ MathLab.app('step-builder', {
 
   build() {
   const { pick, mathHTML } = MathLab;
-  const { cloneAll, MOVES, isSimplified, suggest, render, theFraction,
-          factorisation, isProduct, reachedGoal, PALETTE, DONE_LABEL, notYet } = Algebra;
+  const { cloneAll, MOVES, suggest, render, theFraction,
+          reachedGoal, PALETTE, DONE_LABEL, notYet, bannedValues } = Algebra;
 
   function makeRound(pool) {
     const problem = pick(pool)();
+
+    // The banned values come from the bottom of the ORIGINAL fraction. That is the whole
+    // point of them: they survive cancelling, and they are the marks people throw away.
+    const banned = bannedValues(problem.items);
+    const asksBanned = !!(banned && banned.values && banned.values.length);
 
     const round = {
       prompt: problem.goal === 'factor' ? 'Write this as a product.'
@@ -48,6 +53,7 @@ MathLab.app('step-builder', {
         let wrongMoves = 0;
         let hintRung = 0;
         let finished = false;
+        let bannedMissed = false;
 
         stage.innerHTML = `
           <p class="chip-label" data-type></p>
@@ -137,14 +143,89 @@ MathLab.app('step-builder', {
           paint();
           el.stuck.disabled = true;
 
+          if (asksBanned) askBanned();
+          else settle();
+        }
+
+        /* The second half of a fraction question. Cancelling makes a value LOOK harmless —
+           (x + 7) disappears and x = -7 stops being visible — so it is asked separately,
+           and the wrong answer on offer is exactly the one that forgets it. */
+        function askBanned() {
+          const L = banned.letter;
+          const decoys = new Set(banned.values);
+          for (const v of banned.values) decoys.add(-v);
+          decoys.add(0);
+          const options = [...decoys].sort((a, b) => a - b).slice(0, 6);
+          const chosen = new Set();
+
+          const box = document.createElement('div');
+          box.className = 'banned';
+          box.innerHTML =
+            '<b>One more thing</b>' +
+            '<p>Which values may <i class="var">' + L + '</i> never take? ' +
+            'Take them from the bottom you <em>started</em> with.</p>' +
+            '<div class="chips" data-banned></div>' +
+            '<div class="answer-row"><button type="button" data-banned-check>Check</button></div>' +
+            '<p class="why-line" data-banned-why> </p>';
+          stage.appendChild(box);
+
+          const row = box.querySelector('[data-banned]');
+          const buttons = options.map((v) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'chip';
+            b.setAttribute('aria-pressed', 'false');
+            b.innerHTML = mathHTML(L) + ' = ' + v;
+            b.addEventListener('click', () => {
+              if (chosen.has(v)) chosen.delete(v); else chosen.add(v);
+              b.setAttribute('aria-pressed', String(chosen.has(v)));
+            });
+            row.appendChild(b);
+            return b;
+          });
+
+          const why = box.querySelector('[data-banned-why]');
+          const check = box.querySelector('[data-banned-check]');
+
+          check.addEventListener('click', () => {
+            const want = new Set(banned.values);
+            const right = chosen.size === want.size && [...chosen].every((v) => want.has(v));
+
+            buttons.forEach((b, i) => {
+              b.disabled = true;
+              if (want.has(options[i])) b.classList.add('hit');
+              else if (chosen.has(options[i])) b.classList.add('miss');
+            });
+            check.disabled = true;
+
+            if (!right) {
+              bannedMissed = true;
+              const missed = banned.values.filter((v) => !chosen.has(v));
+              why.className = 'why-line bad';
+              why.innerHTML = missed.length
+                ? 'Missed ' + missed.map((v) => L + ' = ' + v).join(' and ') +
+                  '. A value that cancelled away still breaks the fraction you started with.'
+                : 'Those extra ones are fine — only the bottom you started with can ban a value.';
+            } else {
+              why.className = 'why-line good';
+              why.innerHTML = 'Yes. Write them next to the answer — they are free marks.';
+            }
+            settle();
+          });
+        }
+
+        function settle() {
           const steps = lines.length - 1;
-          const clean = wrongMoves === 0 && hintRung < 3;
+          const clean = wrongMoves === 0 && hintRung < 3 && !bannedMissed;
+
+          const answer = lines.join('  =  ') +
+            (asksBanned ? ',   ' + banned.values.map((v) => banned.letter + ' ≠ ' + v).join(', ') : '');
 
           const bridge = document.createElement('div');
           bridge.className = 'bridge';
           bridge.innerHTML =
             '<b>Your working</b>' +
-            '<div class="written">' + mathHTML(lines.join('  =  ')) + '</div>' +
+            '<div class="written">' + mathHTML(answer) + '</div>' +
             '<p class="process">' + steps + ' step' + (steps === 1 ? '' : 's') +
             (clean ? ' · found every move yourself ⭐️' : ' · finished it') + '</p>';
           stage.appendChild(bridge);
@@ -201,6 +282,7 @@ MathLab.app('step-builder', {
     { name: 'Collecting', make: () => makeRound(Problems.COLLECT) },
     { name: 'Factorising', make: () => makeRound(Problems.FACTOR) },
     { name: 'Fractions', make: () => makeRound(Problems.FRACTIONS) },
+    { name: 'Fraction sums', make: () => makeRound(Problems.FRACTION_SUMS) },
   ];
   },
 });

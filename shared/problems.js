@@ -215,16 +215,103 @@ const Problems = (() => {
                        den: [T(k, { [x]: 1 }), T(k * n)] }] };
   };
 
+
+  /* ---------------- powers: divide, power of a power, x^0 ---------------- */
+
+  const powerDivide = () => {
+    const x = V();
+    const hi = rnd(4, 7), lo = rnd(1, 3);
+    return { type: 'Power rule', goal: 'simplify',
+             items: [{ k: 'd', a: T(1, { [x]: hi }), b: T(1, { [x]: lo }) }] };
+  };
+
+  const powerDivideCoeffs = () => {
+    const x = V();
+    const lo = rnd(1, 3), hi = lo + rnd(1, 3);
+    const b = rnd(2, 5);
+    return { type: 'Power rule', goal: 'simplify',
+             items: [{ k: 'd', a: T(b * rnd(2, 5), { [x]: hi }), b: T(b, { [x]: lo }) }] };
+  };
+
+  const powerZero = () => {
+    const x = V();
+    const n = rnd(2, 5);
+    return { type: 'Why x⁰ = 1', goal: 'simplify',
+             items: [{ k: 'd', a: T(1, { [x]: n }), b: T(1, { [x]: n }) }] };
+  };
+
+  const powerOfPower = () => {
+    const x = V();
+    return { type: 'Power of a power', goal: 'simplify',
+             items: [{ k: 'e', base: T(1, { [x]: rnd(2, 4) }), n: rnd(2, 3) }] };
+  };
+
+  const powerOfPowerCoeff = () => {
+    const x = V();
+    return { type: 'Power of a power', goal: 'simplify',
+             items: [{ k: 'e', base: T(rnd(2, 4), { [x]: rnd(1, 3) }), n: 2 }] };
+  };
+
+  /* ---------------- the bracket-the-wrong-way-round trick ---------------- */
+
+  const fracFlipSign = () => {
+    const x = V();
+    const n = rnd(2, 9);
+    // (x - n) over (n - x): the two brackets are opposites, so the answer is -1
+    return { type: 'Wrong way round', goal: 'fraction',
+             items: [{ k: 'f',
+                       num: [{ k: 'b', m: T(rnd(1, 4)), ts: [T(1, { [x]: 1 }), T(-n)] }],
+                       den: [{ k: 'b', m: T(1), ts: [T(n), T(-1, { [x]: 1 })] }] }] };
+  };
+
+  /* ---------------- fraction arithmetic ---------------- */
+
+  const fracAdd = () => {
+    const x = V();
+    let d1, d2;
+    do { d1 = rnd(2, 6); d2 = rnd(2, 6); } while (d1 === d2);
+    return { type: 'Add fractions', goal: 'fracarith',
+             items: [{ k: 'f', num: [T(rnd(1, 4), { [x]: 1 })], den: [T(d1)] },
+                     { k: 'f', num: [T(rnd(1, 4), { [x]: 1 })], den: [T(d2)] }] };
+  };
+
+  const fracSubtract = () => {
+    const x = V();
+    let d1, d2;
+    do { d1 = rnd(2, 6); d2 = rnd(2, 6); } while (d1 === d2);
+    return { type: 'Subtract fractions', goal: 'fracarith',
+             items: [{ k: 'f', num: [T(rnd(2, 6), { [x]: 1 })], den: [T(d1)] },
+                     { k: 'f', num: [T(-rnd(1, 4), { [x]: 1 })], den: [T(d2)] }] };
+  };
+
+  const fracMultiply = () => {
+    const x = V();
+    return { type: 'Multiply fractions', goal: 'fracarith',
+             items: [{ k: 'x', op: '*',
+                       a: { k: 'f', num: [T(rnd(1, 5), { [x]: 1 })], den: [T(rnd(2, 6))] },
+                       b: { k: 'f', num: [T(rnd(1, 5))], den: [T(rnd(2, 6), { [x]: 1 })] } }] };
+  };
+
+  const fracDivide = () => {
+    const x = V();
+    return { type: 'Divide fractions', goal: 'fracarith',
+             items: [{ k: 'x', op: '/',
+                       a: { k: 'f', num: [T(rnd(2, 6), { [x]: 1 })], den: [T(rnd(2, 5))] },
+                       b: { k: 'f', num: [T(rnd(2, 5), { [x]: 1 })], den: [T(rnd(2, 6))] } }] };
+  };
+
   /* ---------------- pools ---------------- */
 
   const BRACKETS = [expandSimple, expandTermMultiplier, minusBracket, minusBracketBoth,
                     twoBrackets, squareBracket, sumTimesDifference,
                     expandThenCollect, twoBracketsThenCollect];
-  const POWERS = [powerMultiply, powerMultiplyCoeffs, powerTwoLetters, powerThenCollect];
+  const POWERS = [powerMultiply, powerMultiplyCoeffs, powerTwoLetters, powerThenCollect,
+                  powerDivide, powerDivideCoeffs, powerZero, powerOfPower, powerOfPowerCoeff];
   const COLLECT = [collectOnly, collectTwoLetters];
   const FACTOR = [factorCommon, factorCommonNumber, factorDifferenceOfSquares, factorTrinomial];
-  const FRACTIONS = [fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon];
-  const EVERYTHING = [...BRACKETS, ...POWERS, ...COLLECT, ...FACTOR, ...FRACTIONS];
+  const FRACTIONS = [fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon, fracFlipSign];
+  const FRACTION_SUMS = [fracAdd, fracSubtract, fracMultiply, fracDivide];
+  const EVERYTHING = [...BRACKETS, ...POWERS, ...COLLECT, ...FACTOR, ...FRACTIONS, ...FRACTION_SUMS];
 
   // named, so the test report can say which family broke
   const ALL = {
@@ -233,8 +320,10 @@ const Problems = (() => {
     powerMultiply, powerMultiplyCoeffs, powerTwoLetters, powerThenCollect,
     collectOnly, collectTwoLetters,
     factorCommon, factorCommonNumber, factorDifferenceOfSquares, factorTrinomial,
-    fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon,
+    fracCommonFactor, fracTrinomialOverSquares, fracTrinomialOverCommon, fracFlipSign,
+    powerDivide, powerDivideCoeffs, powerZero, powerOfPower, powerOfPowerCoeff,
+    fracAdd, fracSubtract, fracMultiply, fracDivide,
   };
 
-  return { BRACKETS, POWERS, COLLECT, FACTOR, FRACTIONS, EVERYTHING, ALL };
+  return { BRACKETS, POWERS, COLLECT, FACTOR, FRACTIONS, FRACTION_SUMS, EVERYTHING, ALL };
 })();

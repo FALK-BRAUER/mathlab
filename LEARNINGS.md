@@ -48,3 +48,19 @@ The transformation engine and the question repertoire now live in `shared/algebr
 `tools/check-algebra.mjs` play thousands of problems in node in a second, instead of
 driving a browser. It found nothing the browser run had missed — but it is repeatable,
 fast, and mutation-bitten, which the browser run was not.
+
+## 2026-09-06 — A checker that decides "done" using the code under test has a blind spot
+`check-algebra.mjs` stopped playing when `Algebra.isSimplified` said so, which meant it
+could never notice that `isSimplified` was too lenient. It shipped exactly that bug:
+`(9x² − 15x)/3x` "finished" as `3x(3x − 5)/3x`, uncancelled, because cancelling only looked
+at brackets and not at the multiplier in front. No dead end, no value change — the run was
+green. Fixed the engine, then added a `residualWork()` check written independently of
+`isSimplified`, and confirmed it by reverting the fix and watching it go red.
+
+## 2026-09-06 — Order-sensitive keys silently disable a feature
+Brackets were matched by their rendered text, so `(x − 5)` never matched the negative of
+`(5 − x)` — the strings differ. The sign-flip move could therefore never fire, and worse,
+those questions counted as already finished: open one, press done, win, having done
+nothing. Keys are now built from sorted term signatures. The mutation that revealed it was
+one the suite initially failed to catch, which is why "a question that starts already
+finished" is now its own assertion.
