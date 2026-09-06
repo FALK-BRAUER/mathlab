@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HCF Detective · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🔍 HCF Detective</h1>
+    <p class="tagline">Break both terms apart. Whatever is in both is the answer.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script>
+MathLab.app('hcf-detective', {
+  emoji: '🔍',
+  title: 'HCF Detective',
+  tagline: 'Break both terms apart. Whatever is in both is the answer.',
+  blurb: 'Find what two terms have in common — the highest common factor.',
+
+  build() {
+  const { rnd, pick, shuffle, mathHTML, sup } = MathLab;
+
+  const LETTERS = ['x', 'y', 'z', 'p', 'q', 'r', 'a', 'b', 'c'];
+
+  /** Prime factors of n, smallest first: 26 -> [2, 13]. */
+  function primes(n) {
+    const out = [];
+    let v = Math.abs(n);
+    for (let d = 2; d * d <= v; d++) while (v % d === 0) { out.push(d); v /= d; }
+    if (v > 1) out.push(v);
+    return out;
+  }
+
+  /**
+   * A term written out as the things it is multiplied from: 26xy²z becomes
+   * 2 · 13 · x · y · y · z. Seeing the pieces IS the method — the HCF is just the
+   * pieces that appear in both lists.
+   */
+  function pieces(term) {
+    const out = primes(term.c).map(String);
+    for (const k of Object.keys(term.v).sort()) {
+      for (let i = 0; i < term.v[k]; i++) out.push(k);
+    }
+    for (const b of term.blocks || []) out.push(b);
+    return out;
+  }
+
+  /** How a term is written normally: 26xy²z */
+  function label(term) {
+    const body = Object.keys(term.v).sort()
+      .map((k) => k + (term.v[k] === 1 ? '' : sup(term.v[k]))).join('');
+    const blocks = (term.blocks || []).join('');
+    const c = term.c === 1 && (body || blocks) ? '' : String(term.c);
+    return c + body + blocks;
+  }
+
+  /** The pieces present in both lists, counting repeats — this is the HCF. */
+  function shared(a, b) {
+    const pool = [...b];
+    const out = [];
+    for (const piece of a) {
+      const at = pool.indexOf(piece);
+      if (at !== -1) { out.push(piece); pool.splice(at, 1); }
+    }
+    return out;
+  }
+
+  const tally = (list) => {
+    const m = new Map();
+    for (const x of list) m.set(x, (m.get(x) || 0) + 1);
+    return m;
+  };
+
+  const sameTally = (a, b) => {
+    const ta = tally(a), tb = tally(b);
+    if (ta.size !== tb.size) return false;
+    for (const [k, v] of ta) if (tb.get(k) !== v) return false;
+    return true;
+  };
+
+  /** Write a list of pieces back as a single term: [2, x, z] -> 2xz */
+  function asTerm(list) {
+    if (!list.length) return '1';
+    let n = 1;
+    const powers = new Map();
+    for (const piece of list) {
+      if (/^\d+$/.test(piece)) n *= Number(piece);
+      else powers.set(piece, (powers.get(piece) || 0) + 1);
+    }
+    // letters first, then any whole brackets — b(b + 1), never (b + 1)b
+    const body = [...powers.entries()]
+      .sort((x, y) => {
+        const bx = x[0].startsWith('('), by = y[0].startsWith('(');
+        if (bx !== by) return bx ? 1 : -1;
+        return x[0] < y[0] ? -1 : 1;
+      })
+      .map(([k, n]) => k + (n === 1 ? '' : sup(n)))
+      .join('');
+    return (n === 1 && body ? '' : String(n)) + body;
+  }
+
+  /* ---- the two terms ---- */
+
+  const randomTerm = (letters, maxPower) => ({
+    c: rnd(2, 30),
+    v: Object.fromEntries(letters.map((k) => [k, rnd(1, maxPower)])),
+  });
+
+  function plainPair() {
+    const all = shuffle(LETTERS.slice()).slice(0, 3);
+    const pickSome = () => shuffle(all.slice()).slice(0, rnd(1, 3));
+    const a = randomTerm(pickSome(), 3);
+    const b = randomTerm(pickSome(), 3);
+    return { a, b, note: 'Take the lower power of each letter — and only what appears in both.' };
+  }
+
+  /** The worksheet's harder pair: a whole bracket counts as one piece. */
+  function blockPair() {
+    const x = pick(LETTERS);
+    const block = '(' + x + ' + 1)';
+    const a = { c: rnd(2, 6), v: { [x]: 2 }, blocks: [block] };
+    const b = { c: 1, v: { [x]: 1 }, blocks: [block] };
+    return { a, b, note: 'A bracket is one piece. It is either in both or it is not — you never break it open.' };
+  }
+
+  function round() {
+    const { a, b, note } = Math.random() < 0.25 ? blockPair() : plainPair();
+    const pa = pieces(a), pb = pieces(b);
+    const want = shared(pa, pb);
+
+    return {
+      prompt: 'Tap the pieces of the <b>first</b> term that also appear in the second.',
+      question: mathHTML(label(a)) + '<span class="hcf-and">and</span>' + mathHTML(label(b)),
+      hint: note + ' If nothing is shared, the highest common factor is just 1.',
+      solution: asTerm(want),
+
+      mount(stage, submit) {
+        const chosen = [];
+
+        stage.innerHTML = `
+          <p class="piece-label">First term, broken up — tap what is also in the second</p>
+          <div class="chips" data-a></div>
+          <p class="piece-label">Second term, for comparing</p>
+          <div class="chips" data-b></div>
+          <p class="why-line" data-why> </p>
+          <div class="answer-row"><button type="button" data-check>Check</button></div>
+        `;
+
+        const rowA = stage.querySelector('[data-a]');
+        const rowB = stage.querySelector('[data-b]');
+        const why = stage.querySelector('[data-why]');
+        const check = stage.querySelector('[data-check]');
+
+        const buttons = pa.map((piece, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'chip';
+          btn.setAttribute('aria-pressed', 'false');
+          btn.innerHTML = mathHTML(piece);
+          btn.addEventListener('click', () => {
+            const at = chosen.indexOf(i);
+            if (at === -1) chosen.push(i); else chosen.splice(at, 1);
+            btn.setAttribute('aria-pressed', String(chosen.includes(i)));
+          });
+          rowA.appendChild(btn);
+          return btn;
+        });
+
+        for (const piece of pb) {
+          const s = document.createElement('span');
+          s.className = 'chip quiet';
+          s.innerHTML = mathHTML(piece);
+          rowB.appendChild(s);
+        }
+
+        check.addEventListener('click', () => {
+          const picked = chosen.map((i) => pa[i]);
+          const right = sameTally(picked, want);
+
+          buttons.forEach((btn) => { btn.disabled = true; });
+          check.disabled = true;
+
+          const answer = asTerm(want);
+          why.className = 'why-line ' + (right ? 'good' : 'bad');
+          why.innerHTML = right
+            ? 'Multiply those together and that is the HCF: <b>' + mathHTML(answer) + '</b>.'
+            : 'The pieces in both are ' +
+              (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'nothing') +
+              ', so the HCF is <b>' + mathHTML(answer) + '</b>.';
+
+          const bridge = document.createElement('div');
+          bridge.className = 'bridge';
+          bridge.innerHTML =
+            '<b>Written down</b><div class="written">HCF of ' + mathHTML(label(a)) + ' and ' +
+            mathHTML(label(b)) + ' = ' + mathHTML(answer) + '</div>';
+          stage.appendChild(bridge);
+
+          submit(right);
+        });
+      },
+    };
+  }
+
+  return [{ name: 'Find the HCF', make: round }];
+  },
+});
+</script>
+<script>MathLab.run('hcf-detective');</script>
+</body>
+</html>

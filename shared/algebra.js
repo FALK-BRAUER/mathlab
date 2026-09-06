@@ -128,7 +128,9 @@ const Algebra = (() => {
       case 'd': return fmt({ ...it.a, c: Math.abs(it.a.c) }, false) + ' ÷ ' + fmt(it.b, false);
       case 'e': return '(' + fmt(it.base, false) + ')' + MathLab.sup(it.n);
       case 'b': return mulPrefix(it.m) + '(' + fmtSum(it.ts) + ')';
-      case 'p': return mulPrefix(it.m) + '(' + fmtSum(it.a) + ')(' + fmtSum(it.b) + ')';
+      case 'p': return mulPrefix(it.m) + (brKey(it.a) === brKey(it.b)
+        ? '(' + fmtSum(it.a) + ')' + MathLab.sup(2)
+        : '(' + fmtSum(it.a) + ')(' + fmtSum(it.b) + ')');
       case 'f': return frac(render(it.num), render(it.den));
       case 'x': return renderItemAbs(it.a) + (it.op === '*' ? ' × ' : ' ÷ ') + renderItemAbs(it.b);
       default: throw new Error('unknown item ' + it.k);
@@ -178,7 +180,8 @@ const Algebra = (() => {
   function factorisation(terms) {
     if (!terms || terms.length < 2 || terms.some((t) => t.k !== 't')) return null;
 
-    // 1 — a factor in every term
+    // 1 — a factor in every term. Tried after the square-minus-square test below,
+    //     because 4x² - 36 must become (2x - 6)(2x + 6), not 4(x² - 9).
     const g = gcdAll(terms.map((t) => t.c));
     const shared = {};
     for (const k of Object.keys(terms[0].v)) {
@@ -186,14 +189,17 @@ const Algebra = (() => {
       if (least > 0) shared[k] = least;
     }
     if (g > 1 || Object.keys(shared).length) {
-      const common = T(g, shared);
+      // Take the sign out with the factor. Leaving it behind gives 2x(-x - 2), which a
+      // teacher marks wrong — the chart wants -2x(x + 2).
+      const signed = terms[0].c < 0 ? -g : g;
+      const common = T(signed, shared);
       const inside = terms.map((t) => {
         const v = cloneVars(t.v);
         for (const k of Object.keys(shared)) {
           v[k] -= shared[k];
           if (v[k] === 0) delete v[k];
         }
-        return T(t.c / g, v);
+        return T(t.c / signed, v);
       });
       return { kind: 'common', item: { k: 'b', m: common, ts: inside },
                why: 'Every term contains <b>' + fmt(common, false) + '</b>, so it comes out to the front.' };
@@ -212,7 +218,8 @@ const Algebra = (() => {
     if (terms.length === 3) {
       const [q2, q1, q0] = terms;
       const vs = Object.keys(q2.v);
-      if (q2.c === 1 && vs.length === 1 && q2.v[vs[0]] === 2 && q1.v[vs[0]] === 1 && isConst(q0)) {
+      const middleOnlyThatLetter = Object.keys(q1.v).length === 1 && q1.v[vs[0]] === 1;
+      if (q2.c === 1 && vs.length === 1 && q2.v[vs[0]] === 2 && middleOnlyThatLetter && isConst(q0)) {
         const p = q1.c, q = q0.c;
         for (let m = -Math.abs(q) - 1; m <= Math.abs(q) + 1; m++) {
           if (m === 0 || q % m !== 0) continue;
@@ -414,6 +421,16 @@ const Algebra = (() => {
       const df = factorisation(f.den);
       return { next: [{ k: 'f', num: f.num.map(cloneItem), den: [df.item] }], why: 'Bottom: ' + df.why };
     }
+    // already a product, but the inside can still be broken down: 4(x² - 9)
+    if (isProduct(items) && items[0].k === 'b') {
+      const inner = factorisation(items[0].ts);
+      const outer = items[0].m;
+      return { next: [{ k: 'p', m: mulTerm(outer, inner.item.m || T(1)),
+                        a: inner.item.k === 'p' ? inner.item.a : inner.item.ts,
+                        b: inner.item.k === 'p' ? inner.item.b : [T(1)] }],
+               why: 'The bracket itself still factorises. ' + inner.why };
+    }
+
     const fa = factorisation(items);
     return { next: [fa.item], why: fa.why };
   }
@@ -554,6 +571,7 @@ const Algebra = (() => {
       can: (items) => {
         const f = theFraction(items);
         if (f) return !!(factorisation(f.num) || factorisation(f.den));
+        if (isProduct(items) && items[0].k === 'b') return !!factorisation(items[0].ts);
         return !!factorisation(items);
       },
       apply: factorOut,
@@ -621,7 +639,15 @@ const Algebra = (() => {
 
   const isProduct = (items) => items.length === 1 && (items[0].k === 'b' || items[0].k === 'p');
 
-  const reachedGoal = (goal, items) => (goal === 'factor' ? isProduct(items) : isSimplified(items));
+  /** A product is only finished when none of its brackets can be broken down further. */
+  function fullyFactored(items) {
+    if (!isProduct(items)) return false;
+    const it = items[0];
+    if (it.k === 'b') return !factorisation(it.ts);
+    return !factorisation(it.a) && !factorisation(it.b);
+  }
+
+  const reachedGoal = (goal, items) => (goal === 'factor' ? fullyFactored(items) : isSimplified(items));
 
   const PALETTE = {
     simplify: ['open', 'power', 'join'],
@@ -732,7 +758,7 @@ const Algebra = (() => {
     T, cloneAll, mulTerm, divTerm, powTerm, mulSums, collect, sig, isConst, gcdAll, lcm,
     render, renderItemAbs, fmt, fmtSum,
     MOVES, isSimplified, suggest, factorisation, theFraction, negatedPair, cancellable,
-    isProduct, reachedGoal, PALETTE, DONE_LABEL, notYet, bannedValues,
+    isProduct, fullyFactored, reachedGoal, PALETTE, DONE_LABEL, notYet, bannedValues,
     evaluate, varsUsed,
   };
 })();

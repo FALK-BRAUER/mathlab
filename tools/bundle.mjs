@@ -33,30 +33,14 @@ function registration(file) {
 }
 
 // Teaching order, not alphabetical — substitution is what the rest builds on.
-const ORDER = ['step-builder.html', 'like-terms.html', 'substitution.html'];
+const ORDER = ['step-builder.html', 'like-terms.html', 'substitution.html',
+               'hcf-detective.html', 'chocolate-box.html'];
 const rank = (f) => (ORDER.indexOf(f) === -1 ? ORDER.length : ORDER.indexOf(f));
 
 const appFiles = readdirSync(join(root, 'apps'))
   .filter((f) => f.endsWith('.html'))
   .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 const registrations = appFiles.map(registration).join('\n\n');
-
-// Topics the worksheets cover that do not have a game yet.
-const planned = [
-  ['✖️', 'Product Builder', 'Multiply terms: 5s × st, 6x × y − 5x × 2y.'],
-  ['➗', 'Quotient Cruncher', 'Cancel and simplify fractions like 9pq ÷ 3q².'],
-  ['🔍', 'HCF Detective', 'Find the highest common factor of two terms.'],
-  ['🍫', 'Chocolate Box', 'Turn word problems into expressions, then solve them.'],
-];
-
-const plannedHTML = planned
-  .map(([emoji, title, blurb]) => `
-      <li class="tile soon">
-        <span class="emoji">${emoji}</span>
-        <h3>${title}</h3>
-        <p>${blurb}</p>
-      </li>`)
-  .join('');
 
 const page = `<title>mathlab</title>
 <style>
@@ -133,9 +117,6 @@ li.tile::after {
     </div>
 
     <ul class="grid" id="hub-grid"></ul>
-    <p class="hub-note">Still being built:</p>
-    <ul class="grid">${plannedHTML}
-    </ul>
   </section>
 
   <section id="view-app" hidden>

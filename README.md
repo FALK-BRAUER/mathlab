@@ -51,12 +51,11 @@ tools/serve.sh                  # or http://localhost:8099
 
 | App | Topic | Status |
 |-----|-------|--------|
+| Step Builder | Pick the move; the working writes itself. Brackets, powers, collecting, factorising, cancelling, banned values | ✅ |
+| Like Terms Hunt | Blocks you join; the joint holds when shapes differ | ✅ |
 | Substitution Machine | Evaluate expressions for given values | ✅ |
-| Like Terms Hunt | Identify and collect like terms | ✅ |
-| Product Builder | Multiplying algebraic terms | 🔲 |
-| Quotient Cruncher | Simplifying algebraic fractions | 🔲 |
-| HCF Detective | Highest common factor | 🔲 |
-| Chocolate Box | Word problems → expressions | 🔲 |
+| HCF Detective | Break both terms into pieces; what is in both is the answer | ✅ |
+| Chocolate Box | Word problems → expression → number | ✅ |
 
 ## Adding an app
 

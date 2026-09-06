@@ -613,3 +613,57 @@ button.move.done {
 .banned .chip { font-size: 1.1rem; padding: 8px 14px; }
 .banned .answer-row { margin-top: 14px; }
 .banned .why-line { margin: 10px 0 0; }
+
+/* ---------- HCF pieces + word-problem options ---------- */
+
+.piece-label {
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.hcf-and {
+  display: inline-block;
+  font-size: .8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin: 0 14px;
+  vertical-align: middle;
+}
+
+.chip.quiet {
+  opacity: .7;
+  cursor: default;
+  border-style: dashed;
+}
+
+.chips + .piece-label { margin-top: 20px; }
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+button.option {
+  text-align: left;
+  font: 800 1.25rem var(--font);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--line), var(--shadow);
+  padding: 15px 20px;
+}
+
+button.option:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--brand), var(--shadow); }
+button.option.hit { box-shadow: inset 0 0 0 2px var(--good); background: var(--good-soft); color: var(--good); }
+button.option.miss { box-shadow: inset 0 0 0 2px var(--bad); background: var(--bad-soft); color: var(--bad); }
+button.option:disabled { opacity: 1; }
+
+/* the story sits in the prompt slot and needs room to breathe */
+.prompt { line-height: 1.55; }

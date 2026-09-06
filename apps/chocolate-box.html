@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chocolate Box · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🍫 Chocolate Box</h1>
+    <p class="tagline">Turn the story into an expression. Then put a number in.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script>
+MathLab.app('chocolate-box', {
+  emoji: '🍫',
+  title: 'Chocolate Box',
+  tagline: 'Turn the story into an expression. Then put a number in.',
+  blurb: 'Word problems: write the expression first, then work out the number.',
+
+  build() {
+  const { rnd, pick, shuffle, mathHTML } = MathLab;
+
+  /* Each story gives the right expression and the wrong ones people actually write.
+     Offering the real mistakes as choices is the point: a blank box tells you nothing
+     about which idea is broken, a chosen distractor tells you exactly. */
+
+  function chocolates() {
+    const N = pick([12, 16, 20, 24, 30]);
+    return {
+      story: 'There are <b>' + N + '</b> chocolates in a box. Aislin eats <i class="var">x</i> of them.',
+      ask: 'Which expression says how many are <b>left</b>?',
+      right: { text: N + ' − x', f: (x) => N - x },
+      wrong: [
+        { text: 'x − ' + N, f: (x) => x - N, why: 'That is the wrong way round — it gives a negative answer.' },
+        { text: N + ' + x', f: (x) => N + x, why: 'Eating them makes the number go down, not up.' },
+        { text: N + ' ÷ x', f: (x) => N / x, why: 'Nothing here is being shared out.' },
+      ],
+      value: rnd(3, 9),
+      letter: 'x',
+    };
+  }
+
+  function halfOfTheRest() {
+    const N = pick([16, 20, 24, 28]);
+    return {
+      story: 'There are <b>' + N + '</b> chocolates. Aislin eats <i class="var">x</i>. ' +
+             'Brindi then eats <b>half</b> of the ones that are left.',
+      ask: 'Which expression says how many <b>Brindi</b> eats?',
+      right: { text: '(' + N + ' − x) ÷ 2', f: (x) => (N - x) / 2 },
+      wrong: [
+        { text: N + ' − x ÷ 2', f: (x) => N - x / 2, why: 'Without the bracket, only the x gets halved.' },
+        { text: N + ' ÷ 2 − x', f: (x) => N / 2 - x, why: 'That halves the box first, before Aislin eats.' },
+        { text: '(' + N + ' + x) ÷ 2', f: (x) => (N + x) / 2, why: 'Aislin eating makes the pile smaller.' },
+      ],
+      value: pick([4, 8, 10, 14]).valueOf() <= N ? pick([4, 8, 10]) : 4,
+      letter: 'x',
+    };
+  }
+
+  function change() {
+    const price = rnd(2, 6);
+    const paid = pick([20, 50]);
+    return {
+      story: 'A bag of sweets costs <b>$' + price + '</b>. You buy <i class="var">n</i> bags ' +
+             'and pay with a <b>$' + paid + '</b> note.',
+      ask: 'Which expression says your <b>change</b>?',
+      right: { text: paid + ' − ' + price + 'n', f: (n) => paid - price * n },
+      wrong: [
+        { text: price + 'n − ' + paid, f: (n) => price * n - paid, why: 'Wrong way round — the note is bigger than the bill.' },
+        { text: paid + ' − ' + price + ' + n', f: (n) => paid - price + n, why: 'The price has to be multiplied by how many bags.' },
+        { text: '(' + paid + ' − ' + price + ')n', f: (n) => (paid - price) * n, why: 'Only the bags are multiplied, not the change.' },
+      ],
+      value: rnd(2, 5),
+      letter: 'n',
+    };
+  }
+
+  function perimeter() {
+    const less = rnd(2, 6);
+    return {
+      story: 'A rectangle is <i class="var">x</i> cm long. It is <b>' + less +
+             ' cm shorter</b> than that across.',
+      ask: 'Which expression says the <b>perimeter</b>?',
+      right: { text: '4x − ' + 2 * less, f: (x) => 4 * x - 2 * less },
+      wrong: [
+        { text: '2x − ' + less, f: (x) => 2 * x - less, why: 'That is only one long side and one short side.' },
+        { text: '4x − ' + less, f: (x) => 4 * x - less, why: 'There are two short sides, so the ' + less + ' comes off twice.' },
+        { text: 'x(x − ' + less + ')', f: (x) => x * (x - less), why: 'That is the area, not the distance round.' },
+      ],
+      value: rnd(5, 12),
+      letter: 'x',
+    };
+  }
+
+  function sharing() {
+    const N = pick([24, 30, 36, 40]);
+    const left = rnd(2, 5);
+    return {
+      story: '<b>' + N + '</b> sweets are shared equally between <i class="var">n</i> friends. ' +
+             '<b>' + left + '</b> sweets are left over.',
+      ask: 'Which expression says how many each friend gets?',
+      right: { text: '(' + N + ' − ' + left + ') ÷ n', f: (n) => (N - left) / n },
+      wrong: [
+        { text: N + ' ÷ n − ' + left, f: (n) => N / n - left, why: 'The leftovers come off the whole pile, before sharing.' },
+        { text: N + ' ÷ n + ' + left, f: (n) => N / n + left, why: 'The leftovers are not given to anyone.' },
+        { text: '(' + N + ' + ' + left + ') ÷ n', f: (n) => (N + left) / n, why: 'There are fewer to share, not more.' },
+      ],
+      value: pick([1, 2, 5, 7].filter((d) => (N - left) % d === 0)) || 1,
+      letter: 'n',
+    };
+  }
+
+  const STORIES = [chocolates, halfOfTheRest, change, perimeter, sharing];
+
+  function round() {
+    const s = pick(STORIES)();
+    const options = shuffle([{ ...s.right, ok: true }, ...s.wrong.map((w) => ({ ...w, ok: false }))]);
+
+    return {
+      prompt: s.story,
+      question: '',
+      hint: 'Read it again one clause at a time, and write down what each clause does. ' +
+            'If something happens to a whole amount, that amount needs a bracket round it.',
+      solution: s.right.text,
+
+      mount(stage, submit) {
+        let picked = null;
+
+        stage.innerHTML = `
+          <p class="piece-label" data-ask></p>
+          <div class="options" data-options></div>
+          <p class="why-line" data-why> </p>
+        `;
+        stage.querySelector('[data-ask]').innerHTML = s.ask;
+
+        const box = stage.querySelector('[data-options]');
+        const why = stage.querySelector('[data-why]');
+
+        const buttons = options.map((opt) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'option';
+          b.innerHTML = mathHTML(opt.text);
+          b.addEventListener('click', () => choose(opt, b));
+          box.appendChild(b);
+          return b;
+        });
+
+        function choose(opt, btn) {
+          if (picked) return;
+          picked = opt;
+
+          buttons.forEach((b, i) => {
+            b.disabled = true;
+            if (options[i].ok) b.classList.add('hit');
+            else if (b === btn) b.classList.add('miss');
+          });
+
+          why.className = 'why-line ' + (opt.ok ? 'good' : 'bad');
+          why.innerHTML = opt.ok
+            ? 'Yes — now put a number in.'
+            : opt.why + ' The expression is <b>' + mathHTML(s.right.text) + '</b>.';
+
+          askValue(opt.ok);
+        }
+
+        /* Second half: the expression is only useful if you can actually use it. */
+        function askValue(cleanSoFar) {
+          const want = s.right.f(s.value);
+
+          const box2 = document.createElement('div');
+          box2.className = 'banned';
+          box2.innerHTML =
+            '<b>Now use it</b><p>Work out the answer when <i class="var">' + s.letter +
+            '</i> = <b>' + s.value + '</b>, using ' + mathHTML(s.right.text) + '.</p>' +
+            '<div data-stage2></div>';
+          stage.appendChild(box2);
+
+          MathLab.textAnswer(box2.querySelector('[data-stage2]'), (ok) => {
+            const line = document.createElement('p');
+            line.className = 'why-line ' + (ok ? 'good' : 'bad');
+            line.innerHTML = ok
+              ? 'Correct — ' + s.right.text.replace(new RegExp(s.letter, 'g'), s.value) + ' = ' + want + '.'
+              : 'It comes to <b>' + want + '</b>: ' +
+                s.right.text.replace(new RegExp(s.letter, 'g'), s.value) + '.';
+            box2.appendChild(line);
+
+            const bridge = document.createElement('div');
+            bridge.className = 'bridge';
+            bridge.innerHTML =
+              '<b>Written down</b><div class="written">' + mathHTML(s.right.text) +
+              ',&nbsp; when ' + mathHTML(s.letter) + ' = ' + s.value + ' this is ' + want + '</div>';
+            stage.appendChild(bridge);
+
+            submit(ok && cleanSoFar);
+          }, {
+            placeholder: 'number',
+            check: (raw) => {
+              const n = Number(raw.replace(/[−–—]/g, '-').trim());
+              return Number.isFinite(n) && Math.abs(n - want) < 1e-9;
+            },
+          });
+        }
+      },
+    };
+  }
+
+  return [{ name: 'Word problems', make: round }];
+  },
+});
+</script>
+<script>MathLab.run('chocolate-box');</script>
+</body>
+</html>
