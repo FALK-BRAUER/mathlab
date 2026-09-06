@@ -18,7 +18,13 @@
 
 <script src="../shared/engine.js"></script>
 <script>
-(() => {
+MathLab.app('like-terms', {
+  emoji: '🧲',
+  title: 'Like Terms Hunt',
+  tagline: 'Terms are "like" when their letters and powers match exactly.',
+  blurb: 'Spot the matching terms, then collect them together.',
+
+  build() {
   const { rnd, rndNonZero, pick, sample, shuffle, formatTerm, formatSum, signature } = MathLab;
 
   const FAMILIES = [['x', 'y'], ['p', 'q'], ['a', 'b'], ['m', 'n']];
@@ -149,15 +155,14 @@
     };
   }
 
-  MathLab.createGame({
-    key: 'like-terms',
-    levels: [
-      { name: '① Spot them', make: spotRound },
-      { name: '② Collect them', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
-      { name: '③ Two groups', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
-    ],
-  });
-})();
+  return [
+    { name: '① Spot them', make: spotRound },
+    { name: '② Collect them', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
+    { name: '③ Two groups', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
+  ];
+  },
+});
 </script>
+<script>MathLab.run('like-terms');</script>
 </body>
 </html>

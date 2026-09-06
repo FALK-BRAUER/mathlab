@@ -7,6 +7,13 @@ No build step, no dependencies. Open `index.html` in a browser and play.
 
 ## Run it
 
+**Anywhere — the published link** (works on the Claude mobile app, any device, no Tailscale):
+
+> https://claude.ai/code/artifact/3b1a8121-c22d-4f5b-89b5-99581c5577d5
+
+That is `dist/mathlab.html`, a single self-contained page built by `node tools/bundle.mjs`.
+Rebuild it and republish to the same URL after changing any app.
+
 **On the tailnet** (iPad, phone, MacBook — any device signed into Tailscale):
 
 > https://falks-mac-mini-2.tail31e524.ts.net:10200/

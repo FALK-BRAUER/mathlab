@@ -18,7 +18,13 @@
 
 <script src="../shared/engine.js"></script>
 <script>
-(() => {
+MathLab.app('substitution', {
+  emoji: '🔢',
+  title: 'Substitution Machine',
+  tagline: 'Swap the letters for their numbers, then work it out.',
+  blurb: 'Put numbers in place of letters and work out the value.',
+
+  build() {
   const { rnd, rndNonZero, pick, mathHTML, sup } = MathLab;
 
   const FAMILIES = [
@@ -163,15 +169,14 @@
     });
   }
 
-  MathLab.createGame({
-    key: 'substitution',
-    levels: [
-      { name: '① Products', make: productRound },
-      { name: '② Mix it up', make: mixedRound },
-      { name: '③ Fractions', make: () => (Math.random() < 0.5 ? sumOverDifference() : multipleOverSum()) },
-    ],
-  });
-})();
+  return [
+    { name: '① Products', make: productRound },
+    { name: '② Mix it up', make: mixedRound },
+    { name: '③ Fractions', make: () => (Math.random() < 0.5 ? sumOverDifference() : multipleOverSum()) },
+  ];
+  },
+});
 </script>
+<script>MathLab.run('substitution');</script>
 </body>
 </html>

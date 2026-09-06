@@ -57,3 +57,19 @@ shell. `MathLab.textAnswer()` covers the common typed case.
 a run without making a late mistake feel catastrophic. Best streak per app persists in
 `localStorage` under `mathlab:<key>`; every read and write is wrapped, so private browsing
 degrades to "scores don't stick" rather than a broken page.
+
+## Publishing
+
+`node tools/bundle.mjs` inlines the theme, the engine and every app registration into one
+self-contained `dist/mathlab.html`, adds a hash router, and leaves the sources untouched.
+This is the inliner the "shared CSS/JS" decision above promised rather than forking the
+theme, and it is what gets published as an Artifact so the games are reachable from a phone
+with no server running.
+
+For that to work, apps register with `MathLab.app(key, def)` and start via
+`MathLab.run(key)` instead of calling `createGame` on load — the same file then works as a
+standalone page and as one view inside the bundle.
+
+`dist/` is generated and git-ignored. The published page relies on the Artifact wrapper for
+its `<meta charset>`; served from a bare static server with no charset header, the emoji
+will mojibake. That is a header problem, not a file problem — the bytes are UTF-8.

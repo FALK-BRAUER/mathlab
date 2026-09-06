@@ -14,8 +14,13 @@
   --bad-soft: #fdeaea;
   --warn: #e08a13;
   --warn-soft: #fdf2e0;
+  --field: #fbfcff;
+  --on-brand: #ffffff;
+  --shadow-tint: rgba(22, 35, 61, .5);
+  --glow-on: rgba(224, 138, 19, .45);
+  --glow-off: rgba(224, 138, 19, 0);
   --radius: 18px;
-  --shadow: 0 2px 0 var(--line), 0 12px 28px -18px rgba(22, 35, 61, .5);
+  --shadow: 0 2px 0 var(--line), 0 12px 28px -18px var(--shadow-tint);
   --font: "Nunito", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
 }
@@ -166,7 +171,7 @@ input[type="text"] {
   padding: 12px 16px;
   border: 2px solid var(--line);
   border-radius: 14px;
-  background: #fbfcff;
+  background: var(--field);
   color: var(--ink);
 }
 
@@ -181,7 +186,7 @@ button {
   border: none;
   border-radius: 14px;
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   cursor: pointer;
 }
 
@@ -209,7 +214,7 @@ button.ghost {
   padding: 10px 18px;
   border-radius: 14px;
   border: 2px solid var(--line);
-  background: #fbfcff;
+  background: var(--field);
   color: var(--ink);
   cursor: pointer;
 }
@@ -232,8 +237,8 @@ button.ghost {
 .chip.miss { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
 
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 138, 19, .45); }
-  50% { box-shadow: 0 0 0 8px rgba(224, 138, 19, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--glow-on); }
+  50% { box-shadow: 0 0 0 8px var(--glow-off); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -291,7 +296,7 @@ button.ghost {
 
 .levels button[aria-pressed="true"] {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 /* ---------- hub grid ---------- */
@@ -347,3 +352,51 @@ a.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
 
 .frac .num { border-bottom: .09em solid currentColor; padding: 0 .3em .05em; }
 .frac .den { padding: .05em .3em 0; }
+
+/* ---------- dark theme ----------
+   Only tokens are redefined; every component above styles through them. The bare :root
+   block holds the complete light palette, so the un-stamped "system" state resolves too. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10141f;
+    --card: #1a2030;
+    --ink: #e8edf9;
+    --muted: #9aa8c4;
+    --line: #2b3550;
+    --brand: #8f9bff;
+    --brand-soft: #262f4d;
+    --good: #4fd396;
+    --good-soft: #1b3a2e;
+    --bad: #ff7d7d;
+    --bad-soft: #3d2226;
+    --warn: #f0ae4e;
+    --warn-soft: #3a2e1a;
+    --field: #141a28;
+    --on-brand: #10141f;
+    --shadow-tint: rgba(0, 0, 0, .75);
+    --glow-on: rgba(240, 174, 78, .4);
+    --glow-off: rgba(240, 174, 78, 0);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #10141f;
+  --card: #1a2030;
+  --ink: #e8edf9;
+  --muted: #9aa8c4;
+  --line: #2b3550;
+  --brand: #8f9bff;
+  --brand-soft: #262f4d;
+  --good: #4fd396;
+  --good-soft: #1b3a2e;
+  --bad: #ff7d7d;
+  --bad-soft: #3d2226;
+  --warn: #f0ae4e;
+  --warn-soft: #3a2e1a;
+  --field: #141a28;
+  --on-brand: #10141f;
+  --shadow-tint: rgba(0, 0, 0, .75);
+  --glow-on: rgba(240, 174, 78, .4);
+  --glow-off: rgba(240, 174, 78, 0);
+}

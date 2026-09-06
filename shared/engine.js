@@ -325,10 +325,28 @@ const MathLab = (() => {
     input.focus();
   }
 
+  /* ---------------- app registry ----------------
+     Each app registers itself instead of starting on load, so the same source can run
+     as a standalone page or as one view inside the bundled single-file build. */
+
+  const apps = new Map();
+
+  /** def: { emoji, title, tagline, blurb, build() -> levels[] } */
+  const app = (key, def) => { apps.set(key, def); };
+
+  const listApps = () => [...apps.entries()].map(([key, def]) => ({ key, ...def }));
+
+  function run(key, mount) {
+    const def = apps.get(key);
+    if (!def) throw new Error('unknown app: ' + key);
+    createGame({ key, mount: mount || '#game', levels: def.build() });
+  }
+
   return {
     rnd, rndNonZero, pick, sample, shuffle,
     parseTerm, signature, canon, sameExpression, splitTerms,
     formatTerm, formatSum, mathHTML, sup,
     createGame, textAnswer,
+    app, run, listApps,
   };
 })();
