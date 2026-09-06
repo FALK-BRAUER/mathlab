@@ -7,9 +7,28 @@ No build step, no dependencies. Open `index.html` in a browser and play.
 
 ## Run it
 
+**On the tailnet** (iPad, phone, MacBook — any device signed into Tailscale):
+
+> https://falks-mac-mini-2.tail31e524.ts.net:10200/
+
+Real HTTPS, no port-forwarding, tailnet only — never exposed to the public internet.
+The Mac mini serves it via `tools/serve.sh` (bound to `127.0.0.1`) with Tailscale
+proxying in front:
+
 ```bash
-open index.html                 # straight from the filesystem
-python3 -m http.server 8080     # or serve it, then visit localhost:8080
+tools/serve.sh                                          # start the backend
+tailscale serve --https=10200 off                       # remove the tailnet mapping
+tailscale serve --bg --https=10200 http://127.0.0.1:8099  # put it back
+```
+
+The Tailscale mapping survives reboots. The backend does not — run `tools/serve.sh`
+under Lingon Pro with KeepAlive so it restarts on its own.
+
+**Locally:**
+
+```bash
+open index.html                 # straight from the filesystem, no server needed
+tools/serve.sh                  # or http://localhost:8099
 ```
 
 ## Layout
