@@ -121,6 +121,15 @@ li.tile::after {
       <h1>🧪 mathlab</h1>
       <p class="tagline">Little games for the algebra chapter. Pick one and start.</p>
     </div>
+    <div class="idea">
+      <b>The one idea</b>
+      <p>A block is a <em>thing</em>. <span class="op">+</span> and <span class="op">−</span> are the
+      joints between blocks — they are not instructions telling you to do something.</p>
+      <p>Blocks of the same shape can join. Different shapes never join, no matter how much
+      the <span class="op">+</span> looks like it wants you to. Almost every mistake in this
+      whole topic is that one thing.</p>
+    </div>
+
     <ul class="grid" id="hub-grid"></ul>
     <p class="hub-note">Still being built:</p>
     <ul class="grid">${plannedHTML}

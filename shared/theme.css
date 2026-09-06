@@ -400,3 +400,122 @@ a.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
   --glow-on: rgba(240, 174, 78, .4);
   --glow-off: rgba(240, 174, 78, 0);
 }
+
+/* ---------- expressions you can operate on ---------- */
+
+.expr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 18px;
+}
+
+/* The joint is the whole point: + and - are seams between blocks, not instructions. */
+.joint {
+  font: 800 1.6rem var(--font);
+  color: var(--muted);
+  padding: 0 2px;
+  transition: color .15s, transform .15s;
+}
+
+.joint.blocked {
+  color: var(--bad);
+  transform: scale(1.35);
+}
+
+.chip.picked {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+  transform: translateY(-3px);
+}
+
+.chip .coeff { font-variant-numeric: tabular-nums; }
+
+.chip.shake { animation: shake .34s; }
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
+.chip.fused { animation: fuse .38s; }
+
+@keyframes fuse {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.22); border-color: var(--good); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip.shake, .chip.fused { animation: none; }
+}
+
+/* why a move was refused, or what a merge just did */
+.why-line {
+  min-height: 1.5em;
+  font-weight: 700;
+  font-size: .95rem;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.why-line.bad { color: var(--bad); }
+.why-line.good { color: var(--good); }
+
+/* the game -> paper bridge. Never let a round end without it. */
+.bridge {
+  background: var(--brand-soft);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-top: 16px;
+}
+
+.bridge b {
+  display: block;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--brand);
+  margin-bottom: 6px;
+}
+
+.bridge .written {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ink);
+  overflow-x: auto;
+}
+
+/* ---------- the one idea, stated once on the hub ---------- */
+
+.idea {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-left: 5px solid var(--brand);
+  padding: 18px 22px;
+  margin-bottom: 18px;
+}
+
+.idea b {
+  display: block;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--brand);
+  margin-bottom: 8px;
+}
+
+.idea p { margin: 0 0 8px; max-width: 62ch; }
+.idea p:last-child { margin-bottom: 0; }
+.idea em { font-style: italic; }
+
+.idea .op {
+  font-weight: 800;
+  color: var(--warn);
+  padding: 0 1px;
+}

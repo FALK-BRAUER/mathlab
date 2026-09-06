@@ -11,7 +11,7 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>🧲 Like Terms Hunt</h1>
-    <p class="tagline">Terms are "like" when their letters and powers match exactly.</p>
+    <p class="tagline">A block is a thing. Plus and minus are the joints between them.</p>
   </div>
   <div id="game"></div>
 </main>
@@ -21,11 +21,11 @@
 MathLab.app('like-terms', {
   emoji: '🧲',
   title: 'Like Terms Hunt',
-  tagline: 'Terms are "like" when their letters and powers match exactly.',
-  blurb: 'Spot the matching terms, then collect them together.',
+  tagline: 'A block is a thing. Plus and minus are the joints between them.',
+  blurb: 'Join the blocks that match. Watch the ones that do not.',
 
   build() {
-  const { rnd, rndNonZero, pick, sample, shuffle, formatTerm, formatSum, signature } = MathLab;
+  const { rnd, rndNonZero, pick, sample, shuffle, formatTerm, formatSum, signature, mathHTML } = MathLab;
 
   const FAMILIES = [['x', 'y'], ['p', 'q'], ['a', 'b'], ['m', 'n']];
 
@@ -40,6 +40,16 @@ MathLab.app('like-terms', {
   ];
 
   const term = (vars) => ({ coeff: rndNonZero(-6, 8), vars });
+
+  /** Name a shape the way the wall chart names it: squares, bars, numbers. */
+  function shapeName(vars, plural = true) {
+    const keys = Object.keys(vars);
+    if (keys.length === 0) return plural ? 'numbers' : 'number';
+    if (keys.length === 1 && vars[keys[0]] === 1) return plural ? 'bars' : 'bar';
+    if (keys.length === 1 && vars[keys[0]] === 2) return plural ? 'squares' : 'square';
+    if (keys.length === 1 && vars[keys[0]] === 3) return plural ? 'cubes' : 'cube';
+    return formatTerm({ coeff: 1, vars }) + (plural ? ' blocks' : ' block');
+  }
 
   /* ---- Level 1: tap every term like the glowing one ---- */
 
@@ -58,10 +68,10 @@ MathLab.app('like-terms', {
                                  .filter((i) => i >= 0));
 
     return {
-      prompt: 'Tap every term that is <b>like</b> the glowing one, then press Check.',
+      prompt: 'Tap every block that is the <b>same shape</b> as the glowing one, then press Check.',
       question: '',
       hint: 'Same letters <i>and</i> same powers. The number in front does not matter — ' +
-            '3<i class="var">pq</i> and −7<i class="var">pq</i> are like terms.',
+            '3<i class="var">pq</i> and −7<i class="var">pq</i> are the same shape.',
       solution: likes.map((t) => formatTerm(t)).join(', '),
 
       mount(stage, submit) {
@@ -72,7 +82,7 @@ MathLab.app('like-terms', {
         targetRow.style.marginBottom = '18px';
         const targetChip = document.createElement('span');
         targetChip.className = 'chip target';
-        targetChip.innerHTML = MathLab.mathHTML(formatTerm(target));
+        targetChip.innerHTML = mathHTML(formatTerm(target));
         targetRow.appendChild(targetChip);
 
         const row = document.createElement('div');
@@ -83,7 +93,7 @@ MathLab.app('like-terms', {
           b.type = 'button';
           b.className = 'chip';
           b.setAttribute('aria-pressed', 'false');
-          b.innerHTML = MathLab.mathHTML(formatTerm(t));
+          b.innerHTML = mathHTML(formatTerm(t));
           b.addEventListener('click', () => {
             if (chosen.has(i)) chosen.delete(i); else chosen.add(i);
             b.setAttribute('aria-pressed', String(chosen.has(i)));
@@ -115,7 +125,174 @@ MathLab.app('like-terms', {
     };
   }
 
-  /* ---- Levels 2 & 3: collect the like terms and type the answer ---- */
+  /* ---- Level 2: join the blocks ----
+     The mechanic carries the idea the wall chart can only assert. Two blocks of the same
+     shape fuse and the shape visibly does not change, which is the whole of 3x²+4x²=7x².
+     Two blocks of different shapes refuse to fuse and the joint between them lights up,
+     so "you can't do that" is something the student watches instead of something they
+     are told. Every round ends on the written line, or none of this transfers to paper. */
+
+  // Variation theory: hold the shapes still for three rounds and change only the numbers,
+  // so what varies is what the student is meant to notice.
+  let seq = null;
+
+  function nextSpec() {
+    if (seq && seq.left > 0) {
+      seq.left -= 1;
+      return seq;
+    }
+    const family = pick(FAMILIES);
+    const shapes = shuffle(shapesFor(family)).slice(0, rnd(2, 3));
+    seq = { family, shapes, left: 2 };
+    return seq;
+  }
+
+  function joinRound() {
+    const { shapes } = nextSpec();
+
+    const terms = [];
+    for (const vars of shapes) {
+      for (let i = 0, n = rnd(2, 3); i < n; i++) terms.push(term(vars));
+    }
+    shuffle(terms);
+
+    const original = formatSum(terms);
+
+    const round = {
+      prompt: 'Tap two blocks to join them. Only blocks of the <b>same shape</b> can join.',
+      question: '',
+      hint: 'The + and − between blocks are joints, not instructions. ' +
+            'Joining adds the numbers in front — it never changes the shape.',
+      solution: '',   // filled in once the round resolves
+
+      mount(stage, submit) {
+        const live = terms.map((t) => ({ ...t }));
+        let picked = null;
+        let mistakes = 0;
+
+        const why = document.createElement('p');
+        why.className = 'why-line';
+        why.textContent = ' ';
+
+        const expr = document.createElement('div');
+        expr.className = 'expr';
+
+        stage.append(why, expr);
+
+        const say = (text, tone) => {
+          why.className = 'why-line' + (tone ? ' ' + tone : '');
+          why.innerHTML = text;
+        };
+
+        function finish() {
+          const answer = live.length ? formatSum(live) : '0';
+          round.solution = answer;
+
+          const bridge = document.createElement('div');
+          bridge.className = 'bridge';
+          bridge.innerHTML =
+            '<b>The same move, written down</b>' +
+            '<div class="written">' + mathHTML(original) + ' = ' + mathHTML(answer) + '</div>';
+          stage.appendChild(bridge);
+
+          submit(mistakes === 0);
+        }
+
+        function render(flash) {
+          expr.innerHTML = '';
+
+          live.forEach((t, i) => {
+            if (i > 0) {
+              const j = document.createElement('span');
+              j.className = 'joint';
+              j.textContent = t.coeff < 0 ? '−' : '+';
+              if (flash && flash.joints.includes(i)) j.classList.add('blocked');
+              expr.appendChild(j);
+            }
+
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'chip';
+            if (picked === i) b.classList.add('picked');
+            if (flash && flash.shake.includes(i)) b.classList.add('shake');
+            if (flash && flash.fuse === i) b.classList.add('fused');
+
+            // after the first block the sign lives in the joint, so show the size only
+            const shown = i === 0 ? formatTerm(t) : formatTerm({ ...t, coeff: Math.abs(t.coeff) });
+            b.innerHTML = mathHTML(shown);
+            b.addEventListener('click', () => tap(i));
+            expr.appendChild(b);
+          });
+        }
+
+        function tap(i) {
+          if (picked === null) {
+            picked = i;
+            say('Now tap the block you want to join it to.');
+            render();
+            return;
+          }
+          if (picked === i) {
+            picked = null;
+            say(' ');
+            render();
+            return;
+          }
+
+          const a = live[picked];
+          const b = live[i];
+
+          if (signature(a) !== signature(b)) {
+            mistakes += 1;
+            const between = [];
+            for (let k = Math.min(picked, i) + 1; k <= Math.max(picked, i); k++) between.push(k);
+            say(
+              formatTerm(a) + ' is ' + shapeName(a.vars) + ', ' +
+              formatTerm(b) + ' is ' + shapeName(b.vars) +
+              ' — different shapes never join. The joint holds.',
+              'bad',
+            );
+            render({ shake: [picked, i], joints: between, fuse: null });
+            picked = null;
+            return;
+          }
+
+          const sum = a.coeff + b.coeff;
+          const name = shapeName(a.vars);
+          const keep = Math.min(picked, i);
+          const drop = Math.max(picked, i);
+
+          if (sum === 0) {
+            live.splice(drop, 1);
+            live.splice(keep, 1);
+            say(a.coeff + ' and ' + b.coeff + ' cancel — no ' + name + ' left.', 'good');
+            picked = null;
+            render();
+          } else {
+            live[keep] = { coeff: sum, vars: a.vars };
+            live.splice(drop, 1);
+            say(
+              a.coeff + ' and ' + b.coeff + ' make ' + sum + ' ' + name +
+              '. The shape did not change.',
+              'good',
+            );
+            picked = null;
+            render({ shake: [], joints: [], fuse: keep });
+          }
+
+          const done = !live.some((t, x) => live.some((u, y) => x !== y && signature(t) === signature(u)));
+          if (done) finish();
+        }
+
+        render();
+      },
+    };
+
+    return round;
+  }
+
+  /* ---- Levels 3 & 4: write the collected expression down ----
+     This is the transfer step. Blocks are the model; standard notation is the exam. */
 
   function collectRound({ groups, perGroup }) {
     const shapes = shuffle(shapesFor(pick(FAMILIES))).slice(0, groups);
@@ -140,10 +317,10 @@ MathLab.app('like-terms', {
     const answer = formatSum(totals);
 
     return {
-      prompt: 'Collect the like terms:',
-      question: MathLab.mathHTML(formatSum(shown)),
-      hint: 'Group the matching terms first, then add their numbers. ' +
-            'Keep the letter part exactly the same.',
+      prompt: 'Collect the like terms and write the answer:',
+      question: mathHTML(formatSum(shown)),
+      hint: 'Join the matching shapes first, then add the numbers in front. ' +
+            'The letters and powers stay exactly as they are.',
       solution: answer,
 
       mount(stage, submit) {
@@ -157,8 +334,9 @@ MathLab.app('like-terms', {
 
   return [
     { name: '① Spot them', make: spotRound },
-    { name: '② Collect them', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
-    { name: '③ Two groups', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
+    { name: '② Join them', make: joinRound },
+    { name: '③ Write it down', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
+    { name: '④ Two shapes', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
   ];
   },
 });
