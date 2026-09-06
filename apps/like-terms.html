@@ -332,11 +332,13 @@ MathLab.app('like-terms', {
     };
   }
 
+  // Joining is the game. It lands first because it is what carries the idea; spotting is
+  // the easier warm-up you drop back to, not the front door.
   return [
-    { name: '① Spot them', make: spotRound },
-    { name: '② Join them', make: joinRound },
-    { name: '③ Write it down', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
-    { name: '④ Two shapes', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
+    { name: 'Join blocks', make: joinRound },
+    { name: 'Spot the shape', make: spotRound },
+    { name: 'Write it down', make: () => collectRound({ groups: 1, perGroup: [3, 3] }) },
+    { name: 'Two shapes', make: () => collectRound({ groups: 2, perGroup: [2, 3] }) },
   ];
   },
 });

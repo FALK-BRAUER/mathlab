@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step Builder · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🪜 Step Builder</h1>
+    <p class="tagline">You choose the move. The working writes itself.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script>
+MathLab.app('step-builder', {
+  emoji: '🪜',
+  title: 'Step Builder',
+  tagline: 'You choose the move. The working writes itself.',
+  blurb: 'Pick the next move, one step at a time, and build the whole solution.',
+
+  build() {
+  const { rnd, rndNonZero, pick, shuffle, formatTerm, formatSum, signature, mathHTML } = MathLab;
+
+  /* ------------------------------------------------------------------
+     An expression is a flat list of items:
+       { kind: 'term',    coeff, vars }
+       { kind: 'bracket', mul, terms: [ {coeff, vars}, ... ] }
+     Small on purpose. It covers expanding, the minus-in-front flip, and
+     collecting — which is where nearly all the marks are lost.
+     ------------------------------------------------------------------ */
+
+  const T = (coeff, vars = {}) => ({ kind: 'term', coeff, vars });
+  const B = (mul, terms) => ({ kind: 'bracket', mul, terms });
+
+  /* ---------------- rendering ---------------- */
+
+  function renderItem(item, lead) {
+    if (item.kind === 'term') return formatTerm(item, { leadingPlus: lead });
+    const sign = item.mul < 0 ? '-' : lead ? '+' : '';
+    const mag = Math.abs(item.mul) === 1 ? '' : String(Math.abs(item.mul));
+    return sign + mag + '(' + formatSum(item.terms) + ')';
+  }
+
+  const renderExpr = (items) =>
+    items.length
+      ? items.map((it, i) => renderItem(it, i > 0)).join(' ').replace(/ ([+-])/g, ' $1 ')
+      : '0';
+
+  /* ---------------- what is possible right now ---------------- */
+
+  const hasBracket = (items) => items.some((it) => it.kind === 'bracket');
+
+  function joinableSignature(items) {
+    const seen = new Map();
+    for (const it of items) {
+      if (it.kind !== 'term') continue;
+      const sig = signature(it);
+      if (seen.has(sig)) return sig;
+      seen.set(sig, true);
+    }
+    return null;
+  }
+
+  const isSimplified = (items) => !hasBracket(items) && joinableSignature(items) === null;
+
+  /* ---------------- the moves ---------------- */
+
+  /** Multiply the bracket out. When the multiplier is −1 this IS the sign flip. */
+  function openBracket(items) {
+    const at = items.findIndex((it) => it.kind === 'bracket');
+    const br = items[at];
+
+    const opened = br.terms.map((t) => T(t.coeff * br.mul, t.vars));
+    const next = [...items.slice(0, at), ...opened, ...items.slice(at + 1)];
+
+    const why = br.mul === -1
+      ? 'A minus in front flips the sign of <b>every</b> term inside — not just the first one.'
+      : 'The ' + Math.abs(br.mul) + ' outside touches <b>every</b> term inside the bracket.';
+
+    return { next, why };
+  }
+
+  /** Collect every group of like terms at once, keeping each group where it first appeared. */
+  function joinBlocks(items) {
+    const out = [];
+    const index = new Map();
+    let note = '';
+
+    for (const it of items) {
+      if (it.kind !== 'term') { out.push(it); continue; }
+      const sig = signature(it);
+      if (index.has(sig)) {
+        const slot = index.get(sig);
+        const before = out[slot].coeff;
+        out[slot] = T(before + it.coeff, it.vars);
+        if (!note) {
+          note = before + ' and ' + it.coeff + ' make ' + (before + it.coeff) + ' of the same shape — ' +
+                 'the letters and powers do not change.';
+        }
+      } else {
+        index.set(sig, out.length);
+        out.push(T(it.coeff, it.vars));
+      }
+    }
+
+    const next = out.filter((it) => it.kind !== 'term' || it.coeff !== 0);
+    return { next, why: note || 'Collected the matching blocks.' };
+  }
+
+  const MOVES = {
+    open: {
+      label: 'Open the bracket',
+      can: hasBracket,
+      apply: openBracket,
+      refuse: 'There is no bracket left to open. Look at the shapes instead.',
+    },
+    join: {
+      label: 'Join like blocks',
+      can: (items) => joinableSignature(items) !== null,
+      apply: joinBlocks,
+      refuse: 'No two blocks out here have the same shape yet. ' +
+              'Anything still inside a bracket cannot be joined — open it first.',
+    },
+  };
+
+  /* ---------------- problems, interleaved ----------------
+     Four shapes, drawn at random every round, each needing a different first move.
+     Mixing them is the point: choosing the move is the skill, and a page of identical
+     questions never asks you to choose. */
+
+  const VARS = ['x', 'y', 'a', 'n', 'm', 'p'];
+
+  function expandOnly() {
+    const v = pick(VARS);
+    return {
+      type: 'Open it up',
+      items: [B(rnd(2, 6), [T(rnd(1, 4), { [v]: 1 }), T(rndNonZero(-8, 9))])],
+    };
+  }
+
+  function minusBracket() {
+    const v = pick(VARS);
+    return {
+      type: 'Mind the minus',
+      items: [T(rnd(3, 12)), B(-1, [T(rnd(2, 6), { [v]: 1 }), T(rndNonZero(-9, 9))])],
+    };
+  }
+
+  function collectOnly() {
+    const v = pick(VARS);
+    const shapes = [{ [v]: 2 }, { [v]: 1 }, {}];
+    const items = [];
+    for (const vars of shuffle(shapes.slice(0, rnd(2, 3)))) {
+      for (let i = 0, n = rnd(2, 2); i < n; i++) items.push(T(rndNonZero(-6, 8), vars));
+    }
+    return { type: 'Just collect', items: shuffle(items) };
+  }
+
+  function expandThenJoin() {
+    const v = pick(VARS);
+    return {
+      type: 'Two steps',
+      items: [
+        B(rnd(2, 5), [T(1, { [v]: 1 }), T(rndNonZero(-6, 8))]),
+        T(rndNonZero(-7, 9), { [v]: 1 }),
+      ],
+    };
+  }
+
+  const GENERATORS = [expandOnly, minusBracket, collectOnly, expandThenJoin];
+
+  /* ---------------- the round ---------------- */
+
+  function stepRound() {
+    const problem = pick(GENERATORS)();
+    const start = problem.items;
+
+    const round = {
+      prompt: 'What is the next move?',
+      question: '',
+      hint: 'Look at the whole line before you touch anything. Is there a bracket?',
+      solution: '',
+
+      mount(stage, submit) {
+        let items = start.map((it) =>
+          it.kind === 'bracket' ? B(it.mul, it.terms.map((t) => ({ ...t }))) : { ...it });
+
+        const lines = [renderExpr(items)];
+        let wrongMoves = 0;
+        let hintRung = 0;
+        let solved = false;
+
+        stage.innerHTML = `
+          <p class="chip-label" data-type></p>
+          <ol class="working" data-working></ol>
+          <p class="why-line" data-why> </p>
+          <div class="moves" data-moves></div>
+          <div class="answer-row">
+            <button type="button" class="ghost" data-stuck>Stuck?</button>
+          </div>
+        `;
+
+        const el = {
+          type: stage.querySelector('[data-type]'),
+          working: stage.querySelector('[data-working]'),
+          why: stage.querySelector('[data-why]'),
+          moves: stage.querySelector('[data-moves]'),
+          stuck: stage.querySelector('[data-stuck]'),
+        };
+
+        el.type.textContent = problem.type;
+
+        const say = (text, tone) => {
+          el.why.className = 'why-line' + (tone ? ' ' + tone : '');
+          el.why.innerHTML = text;
+        };
+
+        function paint() {
+          el.working.innerHTML = lines
+            .map((line, i) =>
+              '<li' + (i === lines.length - 1 ? ' class="now"' : '') + '>' +
+              mathHTML(line) + '</li>')
+            .join('');
+
+          el.moves.innerHTML = '';
+          for (const key of ['open', 'join']) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'move';
+            b.textContent = MOVES[key].label;
+            b.addEventListener('click', () => choose(key));
+            el.moves.appendChild(b);
+          }
+
+          const done = document.createElement('button');
+          done.type = 'button';
+          done.className = 'move done';
+          done.textContent = "It's simplest now";
+          done.addEventListener('click', claimDone);
+          el.moves.appendChild(done);
+        }
+
+        function choose(key) {
+          if (solved) return;
+          const move = MOVES[key];
+
+          if (!move.can(items)) {
+            wrongMoves += 1;
+            say(move.refuse, 'bad');   // nothing breaks, nothing is lost
+            return;
+          }
+
+          const { next, why } = move.apply(items);
+          items = next;
+          lines.push(renderExpr(items));
+          say(why, 'good');
+          paint();
+
+          if (isSimplified(items)) {
+            say(why + ' <b>That is as far as it goes — say so.</b>', 'good');
+          }
+        }
+
+        function claimDone() {
+          if (solved) return;
+
+          if (!isSimplified(items)) {
+            wrongMoves += 1;
+            say(
+              hasBracket(items)
+                ? 'Not yet — there is still a bracket sitting there.'
+                : 'Not yet — two blocks out there are still the same shape.',
+              'bad',
+            );
+            return;
+          }
+
+          solved = true;
+          round.solution = renderExpr(items);
+
+          const steps = lines.length - 1;
+          const clean = wrongMoves === 0 && hintRung < 3;
+
+          const bridge = document.createElement('div');
+          bridge.className = 'bridge';
+          bridge.innerHTML =
+            '<b>Your working</b>' +
+            '<div class="written">' + mathHTML(lines.join('  =  ')) + '</div>' +
+            '<p class="process">' + steps + ' step' + (steps === 1 ? '' : 's') +
+            (clean ? ' · found every move yourself ⭐️' : ' · finished it') + '</p>';
+          stage.appendChild(bridge);
+
+          el.moves.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+          el.stuck.disabled = true;
+
+          submit(true);   // finishing is the win. Wrong turns on the way cost nothing.
+        }
+
+        // Three rungs. The first one never gives the move away — hint quality up front is
+        // what stops the ladder being used as an answer button.
+        function stuck() {
+          hintRung = Math.min(hintRung + 1, 3);
+          if (hintRung === 1) {
+            say('Look at the whole line first. A bracket decides everything — it always goes first.');
+          } else if (hintRung === 2) {
+            say(hasBracket(items)
+              ? 'There is still a bracket on that line. What does that tell you?'
+              : 'No brackets left. So look at the shapes — are any two the same?');
+          } else {
+            const next = hasBracket(items) ? 'open' : joinableSignature(items) !== null ? 'join' : null;
+            say(next
+              ? 'The move is: <b>' + MOVES[next].label + '</b>.'
+              : 'Nothing left to do — say it is simplest.');
+          }
+        }
+
+        el.stuck.addEventListener('click', stuck);
+        paint();
+        say('Read the line. Then pick a move.');
+      },
+    };
+
+    return round;
+  }
+
+  return [
+    { name: 'Mixed problems', make: stepRound },
+  ];
+  },
+});
+</script>
+<script>MathLab.run('step-builder');</script>
+</body>
+</html>

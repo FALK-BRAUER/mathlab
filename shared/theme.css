@@ -519,3 +519,73 @@ a.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
   color: var(--warn);
   padding: 0 1px;
 }
+
+/* ---------- step builder ---------- */
+
+.chip-label {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--brand);
+  background: var(--brand-soft);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 0 0 14px;
+}
+
+/* the working builds downwards — this is the thing she takes to paper */
+ol.working {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+ol.working li {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-left: 3px solid var(--line);
+  overflow-x: auto;
+}
+
+ol.working li.now {
+  color: var(--ink);
+  border-left-color: var(--brand);
+  font-size: clamp(1.5rem, 5.5vw, 2rem);
+}
+
+.moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+button.move {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--line), var(--shadow);
+  font-size: 1rem;
+  padding: 14px 20px;
+}
+
+button.move:hover { box-shadow: inset 0 0 0 2px var(--brand), var(--shadow); }
+
+button.move.done {
+  background: var(--good-soft);
+  color: var(--good);
+  box-shadow: inset 0 0 0 2px var(--good-soft), var(--shadow);
+}
+
+.bridge .process {
+  margin: 10px 0 0;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--muted);
+}

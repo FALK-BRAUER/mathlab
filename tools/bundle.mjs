@@ -31,7 +31,7 @@ function registration(file) {
 }
 
 // Teaching order, not alphabetical — substitution is what the rest builds on.
-const ORDER = ['substitution.html', 'like-terms.html'];
+const ORDER = ['step-builder.html', 'like-terms.html', 'substitution.html'];
 const rank = (f) => (ORDER.indexOf(f) === -1 ? ORDER.length : ORDER.indexOf(f));
 
 const appFiles = readdirSync(join(root, 'apps'))
