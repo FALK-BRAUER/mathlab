@@ -7,29 +7,9 @@ No build step, no dependencies. Open `index.html` in a browser and play.
 
 ## Run it
 
-**Anywhere — the published link** (works on the Claude mobile app, any device, no Tailscale):
+**Anywhere — the published site:**
 
-> https://claude.ai/code/artifact/3b1a8121-c22d-4f5b-89b5-99581c5577d5
-
-That is `dist/mathlab.html`, a single self-contained page built by `node tools/bundle.mjs`.
-Rebuild it and republish to the same URL after changing any app.
-
-**On the tailnet** (iPad, phone, MacBook — any device signed into Tailscale):
-
-> https://falks-mac-mini-2.tail31e524.ts.net:10200/dist/index.html
-
-Real HTTPS, no port-forwarding, tailnet only — never exposed to the public internet.
-The Mac mini serves it via `tools/serve.sh` (bound to `127.0.0.1`) with Tailscale
-proxying in front:
-
-```bash
-tools/serve.sh                                          # start the backend
-tailscale serve --https=10200 off                       # remove the tailnet mapping
-tailscale serve --bg --https=10200 http://127.0.0.1:8099  # put it back
-```
-
-The Tailscale mapping survives reboots. The backend does not — run `tools/serve.sh`
-under Lingon Pro with KeepAlive so it restarts on its own.
+> https://falk-brauer.github.io/mathlab/
 
 **Locally:**
 
@@ -37,6 +17,24 @@ under Lingon Pro with KeepAlive so it restarts on its own.
 open index.html                 # straight from the filesystem, no server needed
 tools/serve.sh                  # or http://localhost:8099
 ```
+
+**As one self-contained file:**
+
+`node tools/bundle.mjs` writes `dist/mathlab.html` — every app, theme and engine inlined
+into a single page you can hand to someone or paste anywhere. Rebuild it after changing
+any app.
+
+**On a private tailnet** (optional — iPad, phone, laptop signed into Tailscale):
+
+```bash
+tools/serve.sh                                            # backend on :8099
+tailscale serve --bg --https=10200 http://127.0.0.1:8099  # map onto the tailnet
+tailscale serve --https=10200 off                         # remove the mapping
+```
+
+Then open `https://<your-machine>.<your-tailnet>.ts.net:10200/`. Real HTTPS, no
+port-forwarding, tailnet only. The mapping survives reboots; the backend does not — run
+`tools/serve.sh` under a keepalive supervisor.
 
 ## Layout
 

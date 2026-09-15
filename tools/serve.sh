@@ -1,19 +1,20 @@
 #!/bin/bash
-# Serve mathlab for the tailnet.
+# Serve mathlab over HTTP.
 #
 # Binds every interface by default, so it is reachable three ways:
-#   http://192.168.50.151:8099/                              on the LAN
-#   https://falks-mac-mini-2.tail31e524.ts.net:10200/         over Tailscale
-#   http://localhost:8099/                                    on this machine
+#   http://localhost:8099/                        on this machine
+#   http://<lan-ip>:8099/                         on the LAN
+#   https://<machine>.<tailnet>.ts.net:10200/     over Tailscale, given a serve mapping
 #
 # Set MATHLAB_BIND=127.0.0.1 to go back to localhost-only, which is enough when
 # Tailscale is the only way in — Tailscale proxies from loopback.
 #
-# The Tailscale side is already configured and survives reboots:
+# Map it onto a tailnet (the mapping survives reboots):
 #   tailscale serve --bg --https=10200 http://127.0.0.1:8099
 #   tailscale serve --https=10200 off      # to remove it
 #
-# Run under Lingon Pro (KeepAlive) so it comes back after a reboot or a crash.
+# Run under a keepalive supervisor (launchd, Lingon Pro, pm2) so it comes back
+# after a reboot or a crash.
 
 set -euo pipefail
 
