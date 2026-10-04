@@ -382,7 +382,8 @@ const MathLab = (() => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'option';
-      b.innerHTML = opt.html;
+      // one wrapper: whatever display the button gets, its contents flow as normal text
+      b.innerHTML = '<span class="opt-body">' + opt.html + '</span>';
       b.addEventListener('click', () => {
         if (settled) return;
         if (opt.ok) {
@@ -455,7 +456,7 @@ const MathLab = (() => {
       inp.addEventListener('focus', () => focus(inp));
       inp.addEventListener('pointerdown', () => focus(inp));
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitNow(); } });
-      inp.addEventListener('input', () => inp.classList.remove('wrong'));
+      inp.addEventListener('input', () => { inp.classList.remove('wrong'); why.innerHTML = ' '; });
       inputs[f.key] = inp;
       fieldsEl.appendChild(row);
     }
@@ -464,15 +465,15 @@ const MathLab = (() => {
     const letters = keys.filter((k) => /^[a-z]$/.test(k));
     const KEYS = letters.length
       ? ['7', '8', '9', '−', '+', '⌫', '4', '5', '6', '=', '(', ')', '1', '2', '3', '0', '.', '/', ...letters]
-      : ['7', '8', '9', '⌫', '4', '5', '6', '−', '1', '2', '3', '/', '0', '.'];
-    pad.style.gridTemplateColumns = 'repeat(' + (letters.length ? 6 : 4) + ', 1fr)';
+      : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '−', '/', '.', '⌫'];
+    // numbers: two slim rows, so the question stays on screen above the keys
+    pad.style.gridTemplateColumns = 'repeat(' + (letters.length ? 6 : 7) + ', 1fr)';
     for (const k of KEYS) {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = k;
       if (/^[a-z]$/.test(k)) b.className = 'k-var';
       if (k === '⌫') b.className = 'k-del';
-      if (k === '0' && !letters.length) b.className = 'wide';
       b.setAttribute('aria-label', k === '⌫' ? 'delete' : k === '−' ? 'minus' : k);
       b.addEventListener('pointerdown', (e) => e.preventDefault());   // keep the input focused
       b.addEventListener('click', () => press(k));
@@ -485,6 +486,7 @@ const MathLab = (() => {
       if (k === '⌫') inp.value = inp.value.slice(0, -1);
       else inp.value += k;
       inp.classList.remove('wrong');
+      why.innerHTML = ' ';                                // an old complaint must not sit under a new answer
       focus(inp);
     }
 

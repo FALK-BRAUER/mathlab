@@ -11,6 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -296,3 +297,19 @@ console.log(`dist/mathlab.html  ${(page.length / 1024).toFixed(1)} KB   (for pub
 console.log(`dist/index.html    ${(standalone.length / 1024).toFixed(1)} KB   (for serving)`);
 console.log(`shared/all-apps.js ${others.length} apps   (for the daily mix, generated)`);
 console.log(`apps bundled: ${appFiles.join(', ')}`);
+
+/*
+ * Cache-busting. GitHub Pages serves shared/*.css|js with a 10-minute cache, and iPhone
+ * Safari keeps them longer: after a deploy the phone ran new app code against the OLD
+ * theme, and the keypad rendered as a heap of overlapping buttons. Every reference to a
+ * shared file now carries ?v=<content hash>, so a changed file is a new URL.
+ */
+const hash = (f) => createHash('sha1').update(read('shared', f)).digest('hex').slice(0, 8);
+const stamp = (html) => html.replace(/((?:\.\.\/)?shared\/([\w-]+\.(?:css|js)))(?:\?v=\w+)?/g,
+  (m, ref, file) => ref + '?v=' + hash(file));
+for (const f of [...appFiles.map((a) => join('apps', a)), 'index.html']) {
+  const before = read(f);
+  const after = stamp(before);
+  if (after !== before) writeFileSync(join(root, f), after);
+}
+console.log('cache-busting stamps refreshed in apps/*.html and index.html');

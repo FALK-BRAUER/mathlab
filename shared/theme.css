@@ -922,3 +922,5 @@ ol.working li .tag { font-size: .7em; color: var(--muted); margin-right: 8px; fo
   .story { font-size: 1rem; }
   .goal .slot { font-size: 1rem; }
 }
+
+.opt-body { display: block; }
