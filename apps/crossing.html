@@ -51,8 +51,10 @@ MathLab.app('crossing', {
     stage.appendChild(box);
   }
 
+  /** Check a point in each line — written as y = mx + c, the form a line is read in. */
   function checks(e1, e2, p) {
-    return '<div class="checks">' + L.checkHTML(e1, asQ(p), ORDER, 'A') + L.checkHTML(e2, asQ(p), ORDER, 'B') + '</div>';
+    const c = (e, tag) => L.checkDispHTML(L.layoutLine(e), asQ(p), tag, L.qText);
+    return '<div class="checks">' + c(e1, 'A') + c(e2, 'B') + '</div>';
   }
 
   function addHTML(stage, html) {
@@ -91,10 +93,10 @@ MathLab.app('crossing', {
     const a = L.coef(e, 'x'), b = L.coef(e, 'y');
     if (axis === 'y') {
       const v = L.yIntercept(e);
-      return 'Put x = 0: ' + lineHTML({ L: [L.T(b, 'y')], R: [L.T(e.k)] }) + ', so y = ' + L.qHTML(v) + ' → ' + ptQ(0, v);
+      return 'Put x = 0: ' + lineHTML({ L: [L.T(b, 'y')], R: [L.T(e.k)] }) + (eq(b, 1) ? '' : ', so y = ' + L.qHTML(v)) + ' → ' + ptQ(0, v);
     }
     const v = L.xIntercept(e);
-    return 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + ', so x = ' + L.qHTML(v) + ' → ' + ptQ(v, 0);
+    return 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + (eq(a, 1) ? '' : ', so x = ' + L.qHTML(v)) + ' → ' + ptQ(v, 0);
   }
 
   const EXPLAIN_CROSS = '<ol><li>Each line is every point that makes its equation true.</li>' +
@@ -146,13 +148,13 @@ MathLab.app('crossing', {
         wrong: (p) => judgeTap(p, e1, e2, sol) },
     ];
 
-    return {
+    const round = {
       prompt: 'Build both lines step by step, then find where they cross.',
       question: '',
       solution: ptQ(sol.x, sol.y),
       explain: () => '<ol><li>Line A, ' + a + ': start at the y-intercept ' + ptQ(0, c1) + ', then use the gradient ' + L.qHTML(m1) + ' for a second point.</li>' +
         '<li>Line B, ' + b + ': ' + axisWork(B, 'y') + (useXInt ? '; ' + axisWork(B, 'x') : '') + '.</li>' +
-        '<li>Where they cross: ' + ptQ(sol.x, sol.y) + '.<div class="checks">' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }).replace(/^<div class="checks">|<\/div>$/g, '') + '</div></li></ol>',
+        '<li>Where they cross: ' + ptQ(sol.x, sol.y) + '.' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }) + '</li></ol>',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
         // the instruction sits ABOVE the grid: below it, on a phone, it is off-screen
@@ -163,6 +165,7 @@ MathLab.app('crossing', {
         const why = addHTML(stage, '<p class="why-line"> </p>').firstChild;
         let at = 0, misses = 0, tries = 0, pk = null;
         const placed = [[], []];
+        const missedSteps = new Set();
 
         function start() {
           const ph = phases[at];
@@ -177,7 +180,7 @@ MathLab.app('crossing', {
           pk.stop(); pk.clear();
           if (ph.line < 2) {
             placed[ph.line].push(p);
-            grid.point(p.x, p.y, { cls: ph.line ? 'hot' : 'given', label: '(' + p.x + ', ' + p.y + ')' });
+            grid.point(p.x, p.y, { cls: ph.line ? 'hot' : 'given', label: '(' + Grid.fmtNum(p.x) + ', ' + Grid.fmtNum(p.y) + ')' });
             if (placed[ph.line].length === 2) grid.line(ph.line ? e2 : e1, { cls: ph.line ? 'b' : 'a', label: ph.line ? 'B' : 'A' });
           }
           btn.hidden = true;
@@ -187,7 +190,11 @@ MathLab.app('crossing', {
             why.innerHTML = ' ';
             at++;
             if (at < phases.length) { start(); return; }
-            submit(misses === 0, Math.max(6, 20 - 3 * misses), 'All five steps — built from the equations, not guessed.');
+            // finishing every step is the win; the mistakes on the way cost points, not the round
+            round.firstTry = misses === 0;
+            submit(true, Math.max(6, 20 - 3 * misses), misses === 0
+              ? 'All five steps right first time — built from the equations, not guessed.'
+              : 'Finished. ' + missedSteps.size + ' of ' + phases.length + ' steps needed another try — open How it works to see each one again.');
           });
         }
 
@@ -198,11 +205,12 @@ MathLab.app('crossing', {
           if (ph.ok(p)) {
             why.className = 'why-line good';
             why.innerHTML = ph.because + (ph.line === 2 ? checks(e1, e2, p) : '');
-            if (ph.line === 2) grid.point(p.x, p.y, { cls: 'good', label: '(' + p.x + ', ' + p.y + ')' });
+            if (ph.line === 2) grid.point(p.x, p.y, { cls: 'good', label: '(' + Grid.fmtNum(p.x) + ', ' + Grid.fmtNum(p.y) + ')' });
             advance(p, ph);
             return;
           }
           misses++; tries++;
+          missedSteps.add(at);
           const w = ph.wrong(p) || { trap: 'crossing-other', why: 'Not that one.' };
           note('trap', { trap: w.trap });
           why.className = 'why-line bad';
@@ -213,7 +221,7 @@ MathLab.app('crossing', {
               : at === 1 ? { x: m1.d, y: L.num(L.add(c1, m1.n)) }
               : at === 2 ? { x: 0, y: L.num(L.yIntercept(e2)) }
               : useXInt ? { x: L.num(xiB), y: 0 } : (() => { for (let x = 1; x <= 6; x++) { const y = L.div(L.sub(e2.k, L.mul(L.coef(e2, 'x'), x)), L.coef(e2, 'y')); if (L.isInt(y) && Math.abs(y.n) <= 6) return { x, y: y.n }; } return { x: 0, y: L.num(L.yIntercept(e2)) }; })();
-            why.innerHTML = w.why + ' It is ' + '(' + want.x + ', ' + want.y + '). ' + ph.because;
+            why.innerHTML = w.why + ' It is (' + Grid.fmtNum(want.x) + ', ' + Grid.fmtNum(want.y) + '). ' + ph.because;
             if (ph.line === 2) grid.point(want.x, want.y, { cls: 'good' });
             advance(want, ph);
             return;
@@ -225,6 +233,7 @@ MathLab.app('crossing', {
         start();
       },
     };
+    return round;
   }
 
   /* ---------------- spot the crossing (Mixed only) ---------------- */

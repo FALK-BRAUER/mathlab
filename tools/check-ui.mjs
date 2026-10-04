@@ -26,6 +26,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const shotsAt = args.indexOf('--shots');
 const shots = shotsAt >= 0 ? args.splice(shotsAt, 2)[1] : null;
+// --base https://…/mathlab/ tests the DEPLOYED site instead of the local files
+const darkAt = args.indexOf('--dark');
+const dark = darkAt >= 0 && args.splice(darkAt, 1);
+const baseAt = args.indexOf('--base');
+const base = baseAt >= 0 ? args.splice(baseAt, 2)[1].replace(/\/?$/, '/') : null;
 const ROUNDS = Number(args.find((a) => /^\d+$/.test(a)) || 6);
 const only = args.filter((a) => !/^\d+$/.test(a));
 
@@ -85,6 +90,7 @@ await send('Runtime.enable');
 await send('Page.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
 await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+if (dark) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] });
 
 async function load(url) {
   const done = new Promise((r) => {
@@ -175,7 +181,7 @@ if (shots) mkdirSync(shots, { recursive: true });
 
 let failed = false;
 for (const f of files) {
-  await load(pathToFileURL(join(appsDir, f)).href);
+  await load(base ? base + 'apps/' + f + '?nocache=' + Date.now() : pathToFileURL(join(appsDir, f)).href);
   const nLevels = await evaluate(() => document.querySelectorAll('.levels button').length);
   for (let i = 0; i < nLevels; i++) {
     const name = await evaluate((k) => document.querySelectorAll('.levels button')[k].textContent, i);
