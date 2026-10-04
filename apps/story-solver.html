@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Solver · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>🧾 Story Solver</h1>
+    <p class="tagline">Story → two equations → answer → does it make sense?</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script src="../shared/linear.js"></script>
+<script src="../shared/grid.js"></script>
+<script src="../shared/stories.js"></script>
+<script>
+MathLab.app('story-solver', {
+  emoji: '🧾',
+  ownHints: true,
+  title: 'Story Solver',
+  tagline: 'Story → two equations → answer → does it make sense?',
+  blurb: 'Word problems — tickets, coins, deals, shapes, ages, mixtures — turned into a pair of equations.',
+
+  build() {
+  const { pick, shuffle, mathHTML, note } = MathLab;
+  const L = Linear;
+  const { qNice, qHTML } = L;
+
+  const fmtOf = (s) => (s.cents2 ? L.dispMoney : L.dispNice);
+  const valFmt = (s, v) => (s.money && s.money.includes(v) ? (q) => L.money(q) : qNice);
+  const layoutOf = (s, e) => e.layout || s.layout || ((x) => L.layoutStd(x, s.order));
+  const optHTML = (s, e, o) => fmtOf(s)(o.disp || layoutOf(s, e)(o.eq));
+  const rightHTML = (s, e) => optHTML(s, e, e.options.find((o) => o.ok));
+
+  /* ---------- the shape picture for geometry stories ---------- */
+  function figure(f) {
+    const esc = (t) => String(t).replace(/<[^>]+>/g, '');
+    if (!f) return '';
+    if (f.type === 'rect' || f.type === 'para') {
+      const skew = f.type === 'para' ? 40 : 0;
+      return `<svg class="figure" viewBox="0 0 300 170" aria-hidden="true">
+        <polygon class="shape" points="${40 + skew},30 ${260},30 ${260 - skew},130 40,130" />
+        <text x="150" y="20" text-anchor="middle">${esc(f.top)}</text>
+        <text x="150" y="155" text-anchor="middle">${esc(f.bottom)}</text>
+        <text x="${30 + skew / 2}" y="85" text-anchor="end">${esc(f.left)}</text>
+        <text x="${270 - skew / 2}" y="85">${esc(f.right)}</text>
+      </svg>`;
+    }
+    if (f.type === 'tri') {
+      const [nA, nB, nC] = f.names || ['', '', ''];
+      return `<svg class="figure" viewBox="0 0 300 200" aria-hidden="true">
+        <polygon class="shape" points="40,170 150,25 260,170" />
+        ${f.equalSides ? '<line class="tick" x1="88" y1="92" x2="102" y2="102"/><line class="tick" x1="198" y1="102" x2="212" y2="92"/>' : ''}
+        <text x="150" y="62" text-anchor="middle">${esc(f.a)}°</text>
+        <text x="62" y="160">${esc(f.b)}°</text>
+        <text x="238" y="160" text-anchor="end">${esc(f.c)}°</text>
+        <text x="150" y="16" text-anchor="middle">${nA}</text>
+        <text x="26" y="188">${nB}</text>
+        <text x="274" y="188" text-anchor="end">${nC}</text>
+      </svg>`;
+    }
+    if (f.type === 'tri-sides') {
+      const [a, b, c] = f.sides.map(esc);
+      return `<svg class="figure" viewBox="0 0 300 200" aria-hidden="true">
+        <polygon class="shape" points="40,170 150,30 260,170" />
+        <text x="82" y="92" text-anchor="end">${a}</text>
+        <text x="218" y="92">${b}</text>
+        <text x="150" y="192" text-anchor="middle">${c}</text>
+      </svg>`;
+    }
+    return '';
+  }
+
+  const niceStep = (range, ticks = 6) => {
+    const raw = range / ticks;
+    const p = 10 ** Math.floor(Math.log10(raw));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= raw) return m * p;
+    return 10 * p;
+  };
+
+  function costGraph(stage, s) {
+    const g = s.graph;
+    const xMax = g.nStar * 2;
+    const yAt = (ln, x) => L.num(ln.f) + L.num(ln.r) * x;
+    const yMaxRaw = Math.max(...g.lines.map((ln) => yAt(ln, xMax)));
+    const xStep = niceStep(xMax, 8), yStep = niceStep(yMaxRaw, 8);
+    const grid = Grid.create(stage, {
+      xMin: 0, xMax: Math.ceil(xMax / xStep) * xStep, yMin: 0, yMax: Math.ceil(yMaxRaw / yStep) * yStep,
+      xStep, yStep, xName: g.L, yName: 'c', firstQuadrant: true, labelEvery: 2,
+    });
+    g.lines.forEach((ln, k) => {
+      grid.line(L.E({ c: 1, [g.L]: L.neg(ln.r) }, ln.f), { cls: k ? 'b' : 'a', label: ln.name.replace(/^the /, ''), vars: [g.L, 'c'] });
+    });
+    grid.point(g.nStar, L.num(g.cStar), { cls: 'good', label: g.nStar + ' ' + g.unit });
+    grid.say('Below ' + g.nStar + ' the lower line is the cheaper deal; above it, the other one.');
+  }
+
+  /* ---------- one round ---------- */
+
+  function makeRound(opts) {
+    const s = Stories.make(opts.family ? pick([].concat(opts.family)) : undefined);
+    const typed = !!opts.typed;
+
+    const round = {
+      prompt: '',
+      question: '',
+      solution: s.sentence,
+      mount(stage, submit) {
+        let misses = 0, stuck = 0, cur = null;
+        stage.innerHTML = `
+          <p class="story">${s.text}</p>
+          ${figure(s.figure)}
+          <div class="letters" data-letters hidden></div>
+          <ol class="working" data-working></ol>
+          <p class="step-prompt" data-prompt></p>
+          <div data-area></div>
+          <div class="answer-row"><button type="button" class="ghost" data-stuck>Stuck?</button></div>`;
+        const lettersEl = stage.querySelector('[data-letters]');
+        const working = stage.querySelector('[data-working]');
+        const promptEl = stage.querySelector('[data-prompt]');
+        const area = stage.querySelector('[data-area]');
+        const stuckBtn = stage.querySelector('[data-stuck]');
+
+        const write = (tag, html) => {
+          working.querySelectorAll('li').forEach((li) => li.classList.remove('now'));
+          const li = document.createElement('li');
+          li.className = 'now';
+          li.innerHTML = (tag ? '<span class="tag">' + tag + '</span>' : '') + html;
+          working.appendChild(li);
+        };
+
+        const steps = [];
+        if (opts.kind) steps.push(kindStep);
+        steps.push(lettersStep);
+        if (typed) steps.push(typedEquations);
+        else s.eqs.forEach((e, k) => steps.push(() => eqStep(e, k)));
+        if (!opts.kindOnly) {
+          steps.push(solveStep);
+          if (s.derived) steps.push(derivedStep);
+          if (s.final) steps.push(finalStep);
+        }
+        let at = 0;
+        const next = () => {
+          area.innerHTML = '';
+          cur = null;
+          if (at >= steps.length) return settle();
+          steps[at++]();
+        };
+
+        stuckBtn.addEventListener('click', () => {
+          stuck++;
+          if (cur && cur.reveal) cur.reveal();
+          else if (cur && cur.fill) cur.fill();
+        });
+
+        /* --- which kind of problem? --- */
+        function kindStep() {
+          promptEl.innerHTML = 'Before any maths: what kind of problem is this?';
+          const others = shuffle(Object.keys(Stories.KINDS).filter((k) => k !== s.family)).slice(0, 3);
+          const options = shuffle([s.family, ...others]).map((k) => ({
+            html: Stories.KINDS[k].label + '<span class="kind-blurb">' + Stories.KINDS[k].blurb + '</span>',
+            ok: k === s.family,
+            trap: 'schema',
+            why: k === s.family ? Stories.KINDS[k].blurb : 'Look at what the story gives you: ' + Stories.KINDS[s.family].blurb.toLowerCase(),
+          }));
+          cur = MathLab.choice(area, { options, onMiss: () => misses++, onDone: next });
+        }
+
+        /* --- name the unknowns (given: the reversal error starts with fuzzy letters) --- */
+        function lettersStep() {
+          lettersEl.hidden = false;
+          lettersEl.innerHTML = s.letters.map((l) => '<span>' + mathHTML(l.v) + ' = ' + l.means + '</span>').join('') +
+            (s.derived ? s.derived.filter((d) => d.html !== '<i class="var">' + s.letters[0].v + '</i>')
+              .map((d) => '<span>' + d.label + ' = ' + d.html + '</span>').join('') : '');
+          next();
+        }
+
+        /* --- pick each equation --- */
+        function eqStep(e, k) {
+          promptEl.innerHTML = e.prompt;
+          const options = shuffle(e.options.map((o) => ({ html: optHTML(s, e, o), ok: o.ok, why: o.why, trap: o.trap })));
+          cur = MathLab.choice(area, {
+            options,
+            onMiss: () => misses++,
+            onDone: () => { write(k ? '②' : '①', rightHTML(s, e)); next(); },
+          });
+        }
+
+        /* --- write both equations yourself --- */
+        function typedEquations() {
+          promptEl.innerHTML = 'Write ' + (s.eqs.length > 1 ? 'two equations' : 'an equation') + ' for the story, using the letters above.';
+          const vars = [...new Set(s.letters.map((l) => l.v))];
+          let tries = 0;
+          const flds = s.eqs.map((e, k) => ({ key: 'e' + k, label: k ? '②' : '①' }));
+          cur = MathLab.fields(area, {
+            fields: flds,
+            keys: vars,
+            onSubmit(v) {
+              const empty = flds.filter((f) => !v[f.key]).map((f) => f.key);
+              if (empty.length) { note('unfinished', { what: 'one equation' }); return { ok: false, why: 'Two unknowns need two equations.', wrong: empty }; }
+              const parsed = flds.map((f) => L.parseEquation(v[f.key]));
+              const unread = flds.filter((f, i) => !parsed[i]).map((f) => f.key);
+              if (unread.length && ++tries < 3) return { ok: false, why: 'I can\'t read that. An equation needs an = sign, like 2a + 3c = 50.', wrong: unread };
+              const matched = parsed.map((p) => (p ? s.eqs.findIndex((e) => L.equivalent(p, e.eq)) : -1));
+              const covered = new Set(matched.filter((m) => m >= 0));
+              if (covered.size === s.eqs.length) {
+                s.eqs.forEach((e, k) => write(k ? '②' : '①', rightHTML(s, e)));
+                setTimeout(next, 500);
+                return { ok: true, right: flds.map((f) => f.key) };
+              }
+              misses++;
+              if (!unread.length) tries++;
+              const wrong = flds.filter((f, i) => matched[i] < 0).map((f) => f.key);
+              // name the mistake if her line is one of the known traps
+              let why = 'One of those does not match the story. Read it again, one sentence at a time.';
+              for (const p of parsed.filter(Boolean)) for (const e of s.eqs) for (const o of e.options) {
+                if (!o.ok && L.equivalent(p, o.eq)) { why = o.why; note('trap', { trap: o.trap }); }
+              }
+              if (tries >= 3) {
+                s.eqs.forEach((e, k) => write(k ? '②' : '①', rightHTML(s, e)));
+                setTimeout(next, 1800);
+                return { ok: false, lock: true, why: 'Here they are — compare them with yours.', wrong };
+              }
+              return { ok: false, why, wrong };
+            },
+          });
+          cur.fill = () => {
+            const ins = Object.values(cur.inputs);
+            s.eqs.forEach((e, k) => { ins[k].value = L.dispText(e.options.find((o) => o.ok).disp || layoutOf(s, e)(e.eq)); });
+          };
+        }
+
+        /* --- solve: values for the letters, with sense checks built into the box --- */
+        function solveStep() {
+          promptEl.innerHTML = (s.solvePrompt || 'Now solve the pair.') + ' <span class="kind-blurb">Use substitution or elimination on paper, then put your answers in.</span>';
+          const letters = s.letters.map((l) => l.v);
+          let tries = 0;
+          cur = MathLab.fields(area, {
+            fields: letters.map((v) => ({ key: v, label: mathHTML(v) + ' =' })),
+            onSubmit(v) {
+              const empty = letters.filter((k) => !v[k]);
+              if (empty.length) {
+                note('unfinished', { what: 'one value' });
+                return { ok: false, why: 'The question needs ' + (letters.length > 1 ? 'every' : 'the') + ' value — ' + empty.join(' and ') + ' too.', wrong: empty };
+              }
+              const vals = {};
+              for (const k of letters) { vals[k] = L.parseNumber(v[k]); if (!vals[k]) return { ok: false, why: 'Write a number for ' + k + '.', wrong: [k] }; }
+
+              // sense first: a story has rules that algebra alone doesn't know
+              const silly = letters.filter((k) => (s.whole || []).includes(k) && (!L.isInt(vals[k]) || L.sign(vals[k]) < 0)
+                || (s.positive || []).includes(k) && L.sign(vals[k]) <= 0
+                || (s.between && (L.num(vals[k]) < s.between.lo || L.num(vals[k]) > s.between.hi)));
+              if (silly.length && tries < 2) {
+                misses++; tries++;
+                note('trap', { trap: 'nonsense-answer' });
+                const k = silly[0];
+                const what = (s.letters.find((l) => l.v === k) || {}).means || k;
+                return { ok: false, why: k + ' = ' + qNice(vals[k]) + ' can\'t be right: ' + what + ' can\'t be ' + qNice(vals[k]) + '. Check your equations against the story.', wrong: silly };
+              }
+
+              const okAll = letters.every((k) => L.eq(vals[k], s.sol[k]));
+              if (okAll) {
+                write('', letters.map((k) => mathHTML(k) + ' = ' + valFmt(s, k)(s.sol[k])).join(', '));
+                setTimeout(next, 450);
+                return { ok: true, right: letters };
+              }
+              misses++; tries++;
+              const checks = s.eqs.map((e, i) => L.checkHTML(e.eq, vals, s.order, i ? '②' : '①')).join('');
+              if (tries >= 3) {
+                write('', letters.map((k) => mathHTML(k) + ' = ' + valFmt(s, k)(s.sol[k])).join(', '));
+                setTimeout(next, 2200);
+                return { ok: false, lock: true, why: 'The solution is ' + letters.map((k) => k + ' = ' + qNice(s.sol[k])).join(', ') + '.', wrong: letters };
+              }
+              return { ok: false, why: 'Put them back in: <div class="checks">' + checks + '</div>', wrong: letters.filter((k) => !L.eq(vals[k], s.sol[k])) };
+            },
+          });
+          cur.fill = () => letters.forEach((k) => { cur.inputs[k].value = L.qText(s.sol[k]); });
+        }
+
+        /* --- from the letter to every quantity the question asked about --- */
+        function derivedStep() {
+          promptEl.innerHTML = 'The question asked for all of them. Fill in each one.';
+          const keys = s.derived.map((d, i) => 'd' + i);
+          let tries = 0;
+          cur = MathLab.fields(area, {
+            fields: s.derived.map((d, i) => ({ key: keys[i], label: d.label, long: true })),
+            onSubmit(v) {
+              const empty = keys.filter((k) => !v[k]);
+              if (empty.length) { note('unfinished', { what: 'stopped at the letter' }); return { ok: false, why: 'You found ' + s.letters[0].v + ' — now answer what was asked: every one.', wrong: empty }; }
+              const want = s.derived.map((d) => d.value(s.sol));
+              const wrong = keys.filter((k, i) => { const g = L.parseNumber(v[k]); return !g || !L.eq(g, want[i]); });
+              if (!wrong.length) {
+                write('', s.derived.map((d, i) => d.label + ': ' + qNice(want[i])).join(', '));
+                setTimeout(next, 450);
+                return { ok: true, right: keys };
+              }
+              misses++; tries++;
+              if (tries >= 3) {
+                write('', s.derived.map((d, i) => d.label + ': ' + qNice(want[i])).join(', '));
+                setTimeout(next, 1800);
+                return { ok: false, lock: true, why: s.derived.map((d, i) => d.label + ' = ' + qNice(want[i])).join(', ') + '.', wrong };
+              }
+              return { ok: false, why: 'Use the expressions: ' + s.derived.map((d) => d.label + ' = ' + d.html).join(', ') + '.', wrong };
+            },
+          });
+          cur.fill = () => s.derived.forEach((d, i) => { cur.inputs['d' + i].value = L.qText(d.value(s.sol)); });
+        }
+
+        /* --- the "hence" part, or the decision --- */
+        function finalStep() {
+          const f = s.final;
+          promptEl.innerHTML = f.prompt;
+          if (f.options) {
+            cur = MathLab.choice(area, {
+              options: f.options.map((o) => ({ html: o.label, ok: o.ok, why: o.why, trap: o.trap })),
+              onMiss: () => misses++,
+              onDone: () => { write('', f.options.find((o) => o.ok).label); next(); },
+            });
+            return;
+          }
+          let tries = 0;
+          cur = MathLab.fields(area, {
+            fields: [{ key: 'v', label: 'answer', long: true, unit: f.unit }],
+            onSubmit(v) {
+              if (!v.v) { note('unfinished', { what: 'hence part' }); return { ok: false, why: 'Finish the question — this part counts too.', wrong: ['v'] }; }
+              const g = L.parseNumber(v.v);
+              if (!g) return { ok: false, why: 'Write a number.', wrong: ['v'] };
+              if (L.eq(g, f.value)) { write('', qNice(f.value) + ' ' + f.unit); setTimeout(next, 450); return { ok: true, right: ['v'] }; }
+              misses++; tries++;
+              const t = (f.traps || []).find((tr) => L.eq(tr.value, g));
+              if (t) note('trap', { trap: 'hence-' + s.family });
+              if (tries >= 3) { write('', qNice(f.value) + ' ' + f.unit); setTimeout(next, 1800); return { ok: false, lock: true, why: 'It is ' + qNice(f.value) + ' ' + f.unit + '.', wrong: ['v'] }; }
+              return { ok: false, why: t ? t.why : 'Use the values you found.', wrong: ['v'] };
+            },
+          });
+          cur.fill = () => { cur.inputs.v.value = L.qText(f.value); };
+        }
+
+        function settle() {
+          stuckBtn.hidden = true;
+          promptEl.innerHTML = '';
+          if (opts.kindOnly) {
+            const box = document.createElement('div');
+            box.className = 'bridge';
+            box.innerHTML = '<b>The equations</b><div class="written">' + s.eqs.map((e) => rightHTML(s, e)).join('<br>') + '</div>';
+            stage.appendChild(box);
+          } else {
+            const box = document.createElement('div');
+            box.className = 'bridge';
+            box.innerHTML = '<b>Answer</b><div class="written">' + s.sentence + '</div>' +
+              '<div class="checks">' + s.eqs.map((e, i) => (e.layout || s.layout
+                ? L.checkDispHTML(layoutOf(s, e)(e.eq), s.sol, i ? '②' : '①', s.cents2 ? L.qMoney : qNice)
+                : L.checkHTML(e.eq, s.sol, s.order, i ? '②' : '①', s.cents2 ? L.qMoney : qNice))).join('') + '</div>' +
+              '<p class="process">' + (misses === 0 && stuck === 0 ? 'Every step yours ⭐️' : 'Finished it') + '</p>';
+            stage.appendChild(box);
+            if (s.graph) costGraph(stage, s);
+          }
+          round.firstTry = misses === 0 && stuck === 0;
+          submit(true, Math.max(4, 20 - 3 * misses - 3 * stuck));
+          const nb = document.querySelector('[data-next]');
+          if (nb) nb.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+
+        next();
+      },
+    };
+    return round;
+  }
+
+  /* ---------- match the story: equations -> which story? ---------- */
+  function matchRound() {
+    const fams = shuffle(Object.keys(Stories.FAMILY)).slice(0, 3);
+    const stories = fams.map((f) => Stories.make(f));
+    const target = stories[0];
+    return {
+      prompt: 'Which story do these equations describe?',
+      question: '',
+      solution: 'the ' + Stories.KINDS[target.family].label.toLowerCase() + ' story',
+      mount(stage, submit) {
+        const eqs = document.createElement('div');
+        eqs.className = 'eqs';
+        eqs.innerHTML = target.eqs.map((e, i) => '<div class="eqn ' + (i ? 'b' : 'a') + '"><span class="tag">' + (i ? '②' : '①') + '</span>' + rightHTML(target, e) + '</div>').join('') +
+          '<div class="letters">' + target.letters.map((l) => '<span>' + mathHTML(l.v) + ' = ' + l.means + '</span>').join('') + '</div>';
+        stage.appendChild(eqs);
+        MathLab.choice(stage, {
+          options: shuffle(stories.map((st) => ({
+            html: '<span style="font-size:.9rem;font-weight:600">' + st.text + '</span>',
+            ok: st === target,
+            trap: 'match-story',
+            why: st === target ? '' : 'Check the numbers: do they appear in this story, doing the same job?',
+          }))),
+          onDone(misses) { submit(misses === 0, undefined, target.sentence); },
+        });
+      },
+    };
+  }
+
+  return [
+    { name: 'Mixed', make: () => makeRound({ kind: true }) },
+    { name: 'Which kind?', make: () => makeRound({ kind: true, kindOnly: true }) },
+    { name: 'Count & value', make: () => makeRound({ family: ['count-value', 'relation'] }) },
+    { name: 'Shopping lists', make: () => makeRound({ family: 'two-baskets' }) },
+    { name: 'Which deal?', make: () => makeRound({ family: 'break-even' }) },
+    { name: 'Shapes', make: () => makeRound({ family: 'shape' }) },
+    { name: 'Ages & numbers', make: () => makeRound({ family: ['age', 'number'] }) },
+    { name: 'Mixtures & fractions', make: () => makeRound({ family: ['mixture', 'fraction'] }) },
+    { name: '✍️ Write it yourself', make: () => makeRound({ typed: true }) },
+    { name: 'Match the story', make: matchRound },
+  ];
+  },
+});
+</script>
+<script>MathLab.run('story-solver');</script>
+</body>
+</html>

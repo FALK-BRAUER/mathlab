@@ -49,6 +49,11 @@ port-forwarding, tailnet only. The mapping survives reboots; the backend does no
 
 | App | Topic | Status |
 |-----|-------|--------|
+| 🎯 Daily Mix | 12 mixed questions a day from every app, plus a report for grown-ups | ✅ |
+| 📈 Line Lab | Gradient and intercept: read, rearrange, draw on a grid, intercepts, special lines | ✅ |
+| ✖️ Crossing Point | Solve by graphing; intercept or intersection; one, none or infinitely many | ✅ |
+| ⚖️ Two Equations | Substitution and elimination step by step, every step offering the real mistakes; finish with x AND y | ✅ |
+| 🧾 Story Solver | Word problems → two equations → answer, with sense checks; nine problem families | ✅ |
 | Step Builder | Pick the move; the working writes itself. Brackets, powers, collecting, factorising, cancelling, banned values | ✅ |
 | Like Terms Hunt | Blocks you join; the joint holds when shapes differ | ✅ |
 | Substitution Machine | Evaluate expressions for given values | ✅ |

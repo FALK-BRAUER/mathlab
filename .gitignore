@@ -3,3 +3,7 @@ dist/
 node_modules/
 *.log
 zz_handoffs/
+
+# Research notes and reports describe one specific learner; keep them out of the public repo
+research_notes/
+reports/

@@ -9,7 +9,12 @@ Static site. No bundler, no package manager, no server. Every app is one HTML fi
 index.html          hub
 apps/*.html         one game each — markup + its own level generators
 shared/theme.css    tokens, cards, chips, feedback states
-shared/engine.js    MathLab — random helpers, algebra parser, quiz shell
+shared/engine.js    MathLab — random helpers, algebra parser, quiz shell, learning log,
+                    choice-with-named-mistakes, keypad fields
+shared/linear.js    Linear — exact fractions, lines, pairs, solving step scripts, typed-equation parser
+shared/grid.js      Grid — tappable SVG coordinate plane
+shared/stories.js   Stories — word-problem families for the equations chapter
+shared/all-apps.js  GENERATED — every app's registration, so the daily mix can use them
 ```
 
 ## Decisions
@@ -35,6 +40,33 @@ practice never runs out and answers cannot be memorised. Generators that could p
 ugly answer construct backwards instead: the fraction levels pick the *result* first and
 then solve for a numerator that divides exactly, rather than rejecting bad draws in a loop.
 
+**Exact fractions in the equations chapter.** `Linear` does every calculation in `{ n, d }`
+rationals. "Is this point on the line" and "is this trap really wrong" are equality
+questions; with floats they become tolerance questions, and a tolerance is where a wrong
+trap hides. The checker solves every pair a second way, in floats, as a disagreement test.
+
+**A trap must be false at the answer.** Every step and every word problem offers the right
+line next to lines the named misconceptions produce. When the answer has a 0 in it, or two
+counts are equal, a "mistake" can come out true — and marking a true line wrong teaches the
+wrong thing. Generators avoid those shapes (no zero coordinates, unequal counts); `Stories.make`
+drops any trap that is still true as a last guard; `check-linear.mjs` fails if more than 1%
+of stories need that guard.
+
+**Phone first for the grid.** The target device is an iPhone. A ±6 grid gives ~27px squares
+against a 44pt finger, so taps snap to the nearest grid point and the coordinates are shown
+above the grid while the finger is down. Typed answers use an on-screen keypad (`MathLab.fields`)
+because the iOS keyboard hides the minus sign behind a mode switch — a sign-error machine for
+a learner whose main error is signs.
+
+**Feedback names the mistake.** `submit(correct, points, why)` and `MathLab.choice` show
+*which* error was made, not just that one was (elaborated feedback beats showing the answer
+in the evidence). Each named error is logged as a trap id; the daily mix's report turns the
+log into a list for a parent. The log stays in `localStorage` on the device.
+
+**Finishing is a rule, not a hope.** Rounds in the equations chapter end only when the
+question actually asked is answered — both x and y, every derived quantity, the "hence" part.
+Submitting with a part missing is refused with a reason and logged as `unfinished`.
+
 ## The round contract
 
 A level's `make()` returns:
@@ -47,6 +79,10 @@ A level's `make()` returns:
 | `hint` | Shown when the kid presses "Need a hint?" (HTML) |
 | `solution` | Displayed after a wrong answer |
 | `mount(stage, submit)` | Render the answer UI; call `submit(bool)` once |
+
+Optional: `noHint` (hide the hint button), `noScore` (a summary screen — no score, no log),
+`origin` (the daily mix says which app a round came from), `firstTry` (set by multi-step
+rounds so the log knows a finished round had mistakes on the way).
 
 `mount` owns its own UI, which is what lets tap-to-select and typed answers share one
 shell. `MathLab.textAnswer()` covers the common typed case.

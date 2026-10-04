@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Equations · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>⚖️ Two Equations</h1>
+    <p class="tagline">Substitute or eliminate — and finish with x AND y.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script src="../shared/linear.js"></script>
+<script>
+MathLab.app('two-equations', {
+  emoji: '⚖️',
+  ownHints: true,
+  title: 'Two Equations',
+  tagline: 'Substitute or eliminate — and finish with x AND y.',
+  blurb: 'Solve a pair step by step. Every step offers the real mistakes; the round ends only with both answers checked.',
+
+  build() {
+  const { pick, shuffle, mathHTML, note } = MathLab;
+  const L = Linear;
+  const { qHTML, qText } = L;
+  const ORDER = ['x', 'y'];
+
+  function problem(kind) {
+    if (kind === 'sub') {
+      const p = L.subPair({});
+      return { kind, e1: p.eS, e2: p.eO, sol: p.sol, show1: L.dispHTML(L.layoutFor(p.eS, p.solved)), show2: L.dispHTML(L.layoutStd(p.eO, ORDER)), p };
+    }
+    const p = L.elimPair(kind === 'spicy' ? { shape: 'both', range: 9, maxCo: 9 } : {});
+    return { kind: 'elim', e1: p.e1, e2: p.e2, sol: p.sol, show1: L.dispHTML(L.layoutStd(p.e1, ORDER)), show2: L.dispHTML(L.layoutStd(p.e2, ORDER)), p };
+  }
+
+  function scriptFor(pr, method) {
+    if (method === 'sub') return L.substitutionScript(pr.p.eS, pr.p.eO, pr.p.solved, pr.p.free);
+    return L.eliminationScript(pr.e1, pr.e2, pr.p.target || pick(['x', 'y']));
+  }
+
+  function makeRound(mode) {
+    const kind = mode === 'sub' ? 'sub' : mode === 'elim' ? 'elim' : mode === 'spicy' ? 'spicy'
+      : pick(['sub', 'elim', 'elim']);
+    const pr = problem(kind);
+    const typed = mode === 'write';
+    const offerChoice = mode === 'mixed' && pr.kind === 'sub';
+
+    const round = {
+      prompt: 'Solve the pair.',
+      question: '',
+      solution: 'x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y),
+      mount(stage, submit) {
+        let misses = 0, stuckCount = 0, cur = null;
+        const found = {};
+
+        stage.innerHTML = `
+          <div class="goal"><b>Goal</b><span class="slot" data-x>x = ?</span><span class="slot" data-y>y = ?</span></div>
+          <ol class="working" data-working></ol>
+          <p class="step-prompt" data-prompt></p>
+          <div data-area></div>
+          <div class="answer-row"><button type="button" class="ghost" data-stuck>Stuck?</button></div>
+        `;
+        const working = stage.querySelector('[data-working]');
+        const promptEl = stage.querySelector('[data-prompt]');
+        const area = stage.querySelector('[data-area]');
+        const stuckBtn = stage.querySelector('[data-stuck]');
+
+        const write = (tag, html, now = true) => {
+          working.querySelectorAll('li').forEach((li) => li.classList.remove('now'));
+          const li = document.createElement('li');
+          if (now) li.className = 'now';
+          li.innerHTML = (tag ? '<span class="tag">' + tag + '</span>' : '') + html;
+          working.appendChild(li);
+        };
+        const goal = (v, val) => {
+          found[v] = val;
+          const s = stage.querySelector('[data-' + v + ']');
+          if (s) { s.innerHTML = mathHTML(v) + ' = ' + qHTML(val) + ' ✓'; s.classList.add('done'); }
+        };
+
+        write('①', pr.show1, false);
+        write('②', pr.show2, false);
+
+        let script, steps, i = 0;
+
+        function begin(method) {
+          script = scriptFor(pr, method);
+          steps = script.steps.map(L.present);
+          i = 0;
+          next();
+        }
+
+        function next() {
+          area.innerHTML = '';
+          if (i >= steps.length) return finish();
+          const st = steps[i];
+          promptEl.innerHTML = st.prompt + (st.showContext ? '<div class="eqn">' + st.context + '</div>' : '');
+          const done = () => {
+            if (st.kind === 'value') { write('', st.writtenHTML); goal(st.v, st.answer); }
+            else if (st.kind !== 'pick') write(st.tag || '', st.writtenHTML);
+            i++;
+            next();
+          };
+
+          if (typed && st.kind !== 'pick') {
+            const isValue = st.kind === 'value';
+            let tries = 0;
+            cur = MathLab.fields(area, {
+              fields: [{ key: 'a', label: isValue ? mathHTML(st.v) + ' =' : '', long: false }],
+              keys: isValue ? [] : ['x', 'y'],
+              onSubmit(v) {
+                if (!v.a) { note('unfinished', { what: 'empty line' }); return { ok: false, why: 'Write the line first.', wrong: ['a'] }; }
+                let ok;
+                if (isValue) {
+                  const n = L.parseNumber(v.a);
+                  if (!n) return { ok: false, why: 'Write a number, like −3 or 5/2.', wrong: ['a'] };
+                  ok = L.eq(n, st.answer);
+                } else {
+                  const e = L.parseEquation(v.a);
+                  if (!e) return { ok: false, why: 'I can\'t read that as an equation. It needs an = sign, e.g. 3x − 2y = 10.', wrong: ['a'] };
+                  ok = L.equivalent(e, st.answer);
+                  if (ok && st.mustMatch) {
+                    const match = (f) => Object.entries(st.mustMatch).every(([k, q]) => L.eq(L.mul(L.coef(e, k), f), q));
+                    ok = match(1) || match(-1);
+                  }
+                }
+                if (ok) { setTimeout(done, 450); return { ok: true, why: 'Yes — ' + st.writtenHTML, right: ['a'] }; }
+                tries++; misses++;
+                note('trap', { trap: 'typed-' + st.kind });
+                const hintTrap = st.options.find((o) => !o.ok && o.why);
+                if (tries >= 2) { setTimeout(done, 1600); return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML, wrong: ['a'] }; }
+                return { ok: false, why: 'Not that. ' + (hintTrap ? 'Watch out: ' + hintTrap.why : 'Check each term.'), wrong: ['a'] };
+              },
+            });
+            return;
+          }
+
+          cur = MathLab.choice(area, {
+            options: shuffle(st.options.map((o) => ({ html: o.html, ok: o.ok, why: o.why, trap: o.trap }))),
+            onMiss() { misses++; },
+            onDone: done,
+          });
+        }
+
+        stuckBtn.addEventListener('click', () => {
+          stuckCount++;
+          if (cur && cur.reveal) cur.reveal();
+          else if (steps && steps[i]) {
+            const st = steps[i];
+            if (cur && cur.inputs) {
+              const inp = Object.values(cur.inputs)[0];
+              inp.value = st.kind === 'value' ? qText(st.answer) : L.dispText(st.layout ? st.layout(st.answer) : st.written || st.dispRight);
+            }
+          }
+        });
+
+        function finish() {
+          stuckBtn.hidden = true;
+          promptEl.innerHTML = 'Last step — write the answer to the question: <b>both</b> values.';
+          let wrongTries = 0;
+          MathLab.fields(area, {
+            fields: [{ key: 'x', label: mathHTML('x') + ' =' }, { key: 'y', label: mathHTML('y') + ' =' }],
+            submitLabel: 'Done',
+            onSubmit(v) {
+              const empty = ['x', 'y'].filter((k) => !v[k]);
+              if (empty.length) {
+                note('unfinished', { what: 'stopped at one value' });
+                return { ok: false, why: 'You found ' + (empty.length === 1 ? (empty[0] === 'x' ? 'y' : 'x') : 'nothing yet') + ' — the question asks for x AND y.', wrong: empty };
+              }
+              const gx = L.parseNumber(v.x), gy = L.parseNumber(v.y);
+              if (!gx || !gy) return { ok: false, why: 'Write numbers, like −3 or 5/2.', wrong: [!gx && 'x', !gy && 'y'].filter(Boolean) };
+              const pair = { x: gx, y: gy };
+              const okX = L.eq(gx, pr.sol.x), okY = L.eq(gy, pr.sol.y);
+              if (!okX || !okY) {
+                misses++;
+                wrongTries++;
+                note('trap', { trap: L.eq(gx, pr.sol.y) && L.eq(gy, pr.sol.x) ? 'answer-swapped' : 'answer-copy' });
+                if (wrongTries >= 3) {
+                  round.firstTry = false;
+                  setTimeout(() => submit(false, 0, 'The values are in your working: x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y) + '. Copy both into the answer.'), 200);
+                  return { ok: false, lock: true, why: '', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
+                }
+                return { ok: false, why: 'Check it in both: <div class="checks">' + L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
+              }
+              setTimeout(() => settle(pair), 300);
+              return { ok: true, right: ['x', 'y'] };
+            },
+          });
+        }
+
+        function settle(pair) {
+          const box = document.createElement('div');
+          box.className = 'bridge';
+          box.innerHTML = '<b>Check it — both equations</b><div class="checks">' +
+            L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>' +
+            '<p class="process">' + (script.method === 'substitution' ? 'Substitution' : 'Elimination') + ' · ' + steps.length + ' steps' +
+            (misses === 0 && stuckCount === 0 ? ' · every step yours ⭐️' : ' · finished it') + '</p>';
+          stage.appendChild(box);
+          round.firstTry = misses === 0 && stuckCount === 0;
+          submit(true, Math.max(4, 20 - 3 * misses - 3 * stuckCount));
+          const nextBtn = document.querySelector('[data-next]');
+          if (nextBtn) nextBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+
+        if (offerChoice) {
+          promptEl.innerHTML = '① already says what ' + pr.p.solved + ' equals. Which way in?';
+          let chosen = 'sub';
+          cur = MathLab.choice(area, {
+            options: [
+              { html: 'Substitute ① into ②', ok: true, why: 'Quickest here: ① hands you ' + pr.p.solved + ' ready-made.' },
+              { html: 'Line them up and eliminate', ok: true, why: 'Works too — ① just gets lined up as ax + by = c first.' },
+            ],
+            onDone: () => begin(chosen),
+          });
+          // both are right; the one she taps decides the method (the choice fires onDone later)
+          area.querySelectorAll('button.option').forEach((b, k) => b.addEventListener('click', () => { chosen = k === 0 ? 'sub' : 'elim'; }));
+        } else {
+          begin(pr.kind === 'sub' ? 'sub' : 'elim');
+        }
+      },
+    };
+    return round;
+  }
+
+  return [
+    { name: '① Substitution', make: () => makeRound('sub') },
+    { name: '② Elimination', make: () => makeRound('elim') },
+    { name: 'Mixed', make: () => makeRound('mixed') },
+    { name: '✍️ Write it yourself', make: () => makeRound('write') },
+    { name: '🌶 Spicy', make: () => makeRound('spicy') },
+  ];
+  },
+});
+</script>
+<script>MathLab.run('two-equations');</script>
+</body>
+</html>

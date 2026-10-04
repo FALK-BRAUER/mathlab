@@ -98,3 +98,30 @@ either been built already or been folded into Step Builder. Anyone opening the p
 address saw a project three commits out of date. `bundle.mjs` now generates the root hub
 from the apps' own `MathLab.app()` registrations, so there is one source for the list and
 drift is not possible.
+
+## 2026-10-04 — `display: inline-flex` beats `[hidden]`
+The phone layout gave every button `display: inline-flex`. An author rule beats the
+browser's own `[hidden] { display: none }`, so on phones "Next question" was visible before
+the kid had answered — every app, since the mobile pass. Nothing looked broken: the button
+just sat there, inviting a skip. Found only by screenshotting at iPhone size. Fixed with a
+global `[hidden] { display: none !important }`; `check-ui.mjs` now fails if "Next" is on
+screen before an answer, and was seen to go red with the fix removed.
+
+## 2026-10-04 — The same rule ate the spaces in maths
+`inline-flex` also turns every `<i>` in a rendered equation into a flex item, and flex
+items drop the whitespace between them: "2x − 6y = 6" rendered as "2x− 6y= 6" in every
+option button on a phone, old apps included. Option buttons are `display: block` now. No
+automated check guards this one yet — it was caught by looking at a screenshot.
+
+## 2026-10-04 — A trap can be right
+The first run of `check-linear.mjs` found 763 cases where a "wrong" option was true at the
+answer: multiply-the-first-term-only is harmless when x = 0; swapping two prices changes
+nothing when both counts are equal; dropping a bracket does nothing when the factor is 1.
+A game that marks a true line wrong teaches that maths is arbitrary. The generators now
+avoid the shapes that cause it, and the checker asserts every trap is false at the answer.
+
+## 2026-10-04 — A monkey finds the rounds you cannot finish
+`check-ui.mjs` taps at random — options, keys, grid squares — until "Next" appears. It
+found three levels where a wrong answer could be retried forever with no way out. A kid
+who is stuck needs an exit that still teaches: after three misses the answer is shown and
+the round ends, counted as not-first-try.

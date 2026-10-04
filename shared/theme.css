@@ -27,6 +27,10 @@
 
 * { box-sizing: border-box; }
 
+/* The phone layout gives every button display: inline-flex, which beats the browser's own
+   [hidden] rule — so "Next question" showed before she had answered. Hidden means hidden. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -724,6 +728,9 @@ button.option:disabled { opacity: 1; }
   .back { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; }
   .chip { min-height: 44px; display: inline-flex; align-items: center; }
   button.move { width: 100%; }
+  /* inline-flex turns every bit of maths markup into a flex item and eats the spaces
+     between them: "2x − 6y = 6" rendered as "2x− 6y= 6". Options hold maths — keep them block. */
+  button.option { display: block; }
   .moves { gap: 8px; }
 
   ol.working li { font-size: 1.15rem; padding: 4px 10px; }
@@ -743,4 +750,175 @@ button.option:disabled { opacity: 1; }
   .stat b { font-size: 1rem; }
   .question { font-size: clamp(1.45rem, 8vw, 1.9rem); }
   button.option { font-size: 1.05rem; padding: 13px 14px; }
+}
+
+/* ==================================================================
+   Simultaneous equations chapter: grid, keypad, goal banner, stories.
+   ================================================================== */
+
+/* ---------- coordinate grid ---------- */
+
+.grid-wrap { margin: 4px auto 10px; max-width: 440px; }
+
+.grid-readout {
+  text-align: center;
+  font: 700 .9rem var(--font);
+  color: var(--muted);
+  min-height: 1.6em;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-readout.live { color: var(--brand); font: 800 1.6rem var(--mono); }
+
+.grid-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* only a grid that wants taps swallows the touch — elsewhere the page still scrolls */
+.grid-svg.tappable { touch-action: none; cursor: crosshair; }
+
+.g-bg { fill: var(--field); }
+.g-grid { stroke: var(--line); stroke-width: 1.2; }
+.g-axis { stroke: var(--muted); stroke-width: 2.4; }
+.g-tick { fill: var(--muted); font-family: var(--font); font-weight: 700; }
+.g-name { fill: var(--ink); font: italic 800 18px var(--font); }
+.g-label { font: 800 17px var(--font); paint-order: stroke; stroke: var(--field); stroke-width: 5px; }
+
+.g-line line { stroke-width: 4.5; stroke-linecap: round; }
+.g-line-a line { stroke: var(--brand); }
+.g-line-a .g-label { fill: var(--brand); }
+.g-line-b line { stroke: var(--warn); }
+.g-line-b .g-label { fill: var(--warn); }
+.g-line-user line { stroke: var(--ink); }
+.g-line-good line { stroke: var(--good); }
+.g-line-bad line { stroke: var(--bad); }
+.g-line-ghost line { stroke: var(--good); opacity: .55; }
+.g-dashed line { stroke-dasharray: 10 8; }
+
+.g-pt circle { stroke: var(--field); stroke-width: 3; }
+.g-pt-user circle { fill: var(--ink); }
+.g-pt-good circle { fill: var(--good); }
+.g-pt-bad circle { fill: var(--bad); }
+.g-pt-given circle { fill: var(--brand); }
+.g-pt-hot circle { fill: var(--warn); }
+.g-pt-hot { animation: pulse 1.3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.g-pt .g-label { fill: var(--ink); }
+
+@keyframes pulse { 50% { transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .g-pt-hot { animation: none; } }
+
+.g-cross line { stroke: var(--brand); stroke-width: 1.5; stroke-dasharray: 4 5; }
+.g-cross circle { fill: none; stroke: var(--brand); stroke-width: 3; }
+
+/* equation chips that say which colour is which line */
+.eqs { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 10px; }
+.eqn {
+  font-size: clamp(1.15rem, 4.8vw, 1.45rem);
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  border-left: 5px solid var(--line);
+  overflow-x: auto;
+}
+.eqn.a { border-left-color: var(--brand); }
+.eqn.b { border-left-color: var(--warn); }
+.eqn .tag { color: var(--muted); font-size: .8em; margin-right: 8px; }
+
+/* ---------- goal banner: the finish line stays on screen ---------- */
+
+.goal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  background: var(--warn-soft);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+  font-weight: 800;
+}
+.goal b {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--warn);
+}
+.goal .slot { font-size: 1.1rem; color: var(--ink); }
+.goal .slot.done { color: var(--good); }
+
+/* ---------- typed answers with an on-screen keypad ---------- */
+
+.fields { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 8px; }
+.field { display: flex; align-items: center; gap: 10px; }
+.field label { font-weight: 800; font-size: 1.15rem; min-width: 2.2em; text-align: right; }
+.field label.long { min-width: 6.4em; text-align: left; flex: 0 0 auto; font-size: 1rem; white-space: nowrap; }
+.field input[type="text"] { flex: 1 1 auto; font-size: 1.3rem; padding: 10px 14px; }
+.field input.on { border-color: var(--brand); }
+.field input.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.field input.right { border-color: var(--good); background: var(--good-soft); }
+.field .unit { color: var(--muted); font-weight: 700; }
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.keypad button {
+  padding: 0;
+  min-height: 46px;
+  font: 800 1.2rem var(--font);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+.keypad button.wide { grid-column: span 2; }
+.keypad button.k-var { font-style: italic; color: var(--brand); }
+.keypad button.k-del { color: var(--bad); }
+
+/* ---------- multi-step rounds ---------- */
+
+.step-prompt { font-weight: 800; margin: 4px 0 10px; }
+ol.working li .tag { font-size: .7em; color: var(--muted); margin-right: 8px; font-weight: 700; }
+.letters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.letters span {
+  background: var(--brand-soft);
+  color: var(--ink);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: .92rem;
+  font-weight: 700;
+}
+.story { font-size: 1.08rem; line-height: 1.6; margin: 0 0 12px; }
+.story b { color: var(--brand); }
+.checks { font-size: .98rem; font-weight: 700; margin: 8px 0 0; }
+.checks div { padding: 2px 0; }
+.checks .ok { color: var(--good); }
+.checks .no { color: var(--bad); }
+.kind-blurb { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.figure { display: block; max-width: 300px; width: 100%; margin: 0 auto 12px; }
+.figure text { font: 700 15px var(--font); fill: var(--ink); }
+.figure .shape { fill: var(--brand-soft); stroke: var(--brand); stroke-width: 3; }
+.figure .tick { stroke: var(--brand); stroke-width: 3; }
+
+/* ---------- report ---------- */
+
+.report h3 { margin: 18px 0 8px; font-size: 1rem; }
+.report table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.report td, .report th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.report td.n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; }
+.report .bar { height: 8px; border-radius: 4px; background: var(--brand); }
+.summary-big { font-size: 2.2rem; font-weight: 800; margin: 4px 0; }
+
+@media (max-width: 620px) {
+  .keypad button { min-height: 46px; font-size: 1.15rem; }
+  .story { font-size: 1rem; }
+  .goal .slot { font-size: 1rem; }
 }

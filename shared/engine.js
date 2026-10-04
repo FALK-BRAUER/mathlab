@@ -175,6 +175,26 @@ const MathLab = (() => {
     },
   };
 
+  /* ---------------- learning log ----------------
+     What the parent report reads: every round (first try right or not), every trap she
+     picked, every time she tried to stop before the question was answered. Kept on the
+     device only, capped so it never grows without bound. */
+
+  const LOG_MAX = 1500;
+  let context = { app: '', level: '' };
+
+  function note(kind, detail = {}) {
+    const log = store.read('log');
+    const list = Array.isArray(log.events) ? log.events : [];
+    list.push({ t: Date.now(), app: context.app, level: context.level, kind, ...detail });
+    store.write('log', { events: list.slice(-LOG_MAX) });
+  }
+
+  const readLog = () => {
+    const log = store.read('log');
+    return Array.isArray(log.events) ? log.events : [];
+  };
+
   /* ---------------- quiz shell ----------------
      A game supplies levels; each level's make() returns a round:
        { question, given?, hint, solution, mount(stage, submit) }
@@ -246,10 +266,16 @@ const MathLab = (() => {
       el.best.textContent = best;
     }
 
-    /** submit(correct) — or submit(correct, points) when the app scores its own process. */
-    function submit(correct, points) {
+    /**
+     * submit(correct) — or submit(correct, points) when the app scores its own process,
+     * or submit(correct, points, why) to say WHAT went wrong, not just that it did.
+     * Naming the error is worth more than showing the answer (Van der Kleij et al. 2015).
+     */
+    function submit(correct, points, why) {
       if (answered) return;
       answered = true;
+      if (round.noScore) { el.next.hidden = false; return; }   // a summary screen, not a question
+      note('round', { ok: !!correct, firstTry: round.firstTry !== false && !!correct });
 
       if (correct) {
         streak += 1;
@@ -259,12 +285,14 @@ const MathLab = (() => {
           store.write(config.key, { best });
         }
         el.feedback.className = 'feedback good';
-        el.feedback.innerHTML = pick(['Nice one! 🎉', 'Correct! ⭐️', 'Got it! 🚀', 'Spot on! 💡']);
+        el.feedback.innerHTML = pick(['Nice one! 🎉', 'Correct! ⭐️', 'Got it! 🚀', 'Spot on! 💡']) +
+          (why ? '<span class="why">' + why + '</span>' : '');
       } else {
         streak = 0;
         el.feedback.className = 'feedback bad';
-        el.feedback.innerHTML =
-          'Not quite. <span class="why">Answer: <b>' + round.solution + '</b></span>';
+        el.feedback.innerHTML = 'Not quite.' +
+          (why ? '<span class="why">' + why + '</span>' : '') +
+          (round.solution ? '<span class="why">Answer: <b>' + round.solution + '</b></span>' : '');
       }
 
       el.feedback.hidden = false;
@@ -275,7 +303,10 @@ const MathLab = (() => {
 
     function newRound() {
       answered = false;
+      context = { app: config.key, level: config.levels[level].name };
       round = config.levels[level].make();
+      if (round.origin) context = { ...round.origin };
+      el.hintBtn.hidden = !!config.ownHints || !!round.noHint;
 
       el.feedback.hidden = true;
       el.hint.hidden = true;
@@ -331,6 +362,156 @@ const MathLab = (() => {
     input.focus();
   }
 
+  /**
+   * Multiple choice where a wrong pick is not the end of the round: that option turns red,
+   * the reason it is wrong is named, the trap is logged, and she picks again.
+   *   options: [{ html, ok, why, trap }]   (caller shuffles)
+   *   onDone(misses, box) when the right one is picked
+   */
+  function choice(host, { title, options, onDone, onMiss }) {
+    const box = document.createElement('div');
+    box.className = 'predict';
+    box.innerHTML = (title ? '<b>' + title + '</b>' : '') +
+      '<div class="options"></div><p class="why-line" aria-live="polite"> </p>';
+    const holder = box.querySelector('.options');
+    const why = box.querySelector('.why-line');
+    let misses = 0;
+    let settled = false;
+
+    const buttons = options.map((opt) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'option';
+      b.innerHTML = opt.html;
+      b.addEventListener('click', () => {
+        if (settled) return;
+        if (opt.ok) {
+          settled = true;
+          b.classList.add('hit');
+          buttons.forEach((x) => { x.disabled = true; });
+          why.className = 'why-line good';
+          why.innerHTML = opt.why || ' ';
+          setTimeout(() => onDone(misses, box), 380);
+        } else {
+          misses += 1;
+          b.classList.add('miss');
+          b.disabled = true;
+          why.className = 'why-line bad';
+          why.innerHTML = opt.why || 'Not that one — look again.';
+          if (opt.trap) note('trap', { trap: opt.trap });
+          if (onMiss) onMiss(opt, misses);
+        }
+      });
+      holder.appendChild(b);
+      return b;
+    });
+
+    host.appendChild(box);
+    return {
+      box,
+      /** Reveal the right answer (the "stuck" button). */
+      reveal() {
+        const i = options.findIndex((o) => o.ok);
+        if (i >= 0 && !settled) { misses += 1; buttons[i].click(); }
+      },
+    };
+  }
+
+  /**
+   * Typed answers with an on-screen keypad. On a phone the system keyboard covers half the
+   * screen and hides the minus sign behind a mode switch — a sign-error machine. The keypad
+   * puts − and / one tap away and keeps the question visible. A real keyboard still works.
+   *
+   *   fields: [{ key, label, unit, long }]
+   *   keys:   extra keys, e.g. ['x', 'y', '(', ')', '=', '+']
+   *   onSubmit(values) -> { ok, why, wrong: [keys], right: [keys] } — return nothing to ignore
+   */
+  function fields(host, { fields: list, keys = [], submitLabel = 'Check', onSubmit }) {
+    const box = document.createElement('div');
+    box.className = 'answer-box';
+    box.innerHTML = '<div class="fields"></div><div class="keypad"></div>' +
+      '<div class="answer-row"><button type="button" data-go>' + submitLabel + '</button></div>' +
+      '<p class="why-line" aria-live="polite"> </p>';
+    const fieldsEl = box.querySelector('.fields');
+    const pad = box.querySelector('.keypad');
+    const go = box.querySelector('[data-go]');
+    const why = box.querySelector('.why-line');
+    const inputs = {};
+    let target = null;
+
+    const focus = (inp) => {
+      target = inp;
+      Object.values(inputs).forEach((i) => i.classList.toggle('on', i === inp));
+    };
+
+    for (const f of list) {
+      const row = document.createElement('div');
+      row.className = 'field';
+      const id = 'f' + Math.random().toString(36).slice(2, 8);
+      row.innerHTML = '<label for="' + id + '"' + (f.long ? ' class="long"' : '') + '>' + f.label + '</label>' +
+        '<input type="text" id="' + id + '" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+        (f.unit ? '<span class="unit">' + f.unit + '</span>' : '');
+      const inp = row.querySelector('input');
+      inp.addEventListener('focus', () => focus(inp));
+      inp.addEventListener('pointerdown', () => focus(inp));
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitNow(); } });
+      inp.addEventListener('input', () => inp.classList.remove('wrong'));
+      inputs[f.key] = inp;
+      fieldsEl.appendChild(row);
+    }
+
+    // a number pad for numbers; letters and brackets only when an equation is being written
+    const letters = keys.filter((k) => /^[a-z]$/.test(k));
+    const KEYS = letters.length
+      ? ['7', '8', '9', '−', '+', '⌫', '4', '5', '6', '=', '(', ')', '1', '2', '3', '0', '.', '/', ...letters]
+      : ['7', '8', '9', '⌫', '4', '5', '6', '−', '1', '2', '3', '/', '0', '.'];
+    pad.style.gridTemplateColumns = 'repeat(' + (letters.length ? 6 : 4) + ', 1fr)';
+    for (const k of KEYS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = k;
+      if (/^[a-z]$/.test(k)) b.className = 'k-var';
+      if (k === '⌫') b.className = 'k-del';
+      if (k === '0' && !letters.length) b.className = 'wide';
+      b.setAttribute('aria-label', k === '⌫' ? 'delete' : k === '−' ? 'minus' : k);
+      b.addEventListener('pointerdown', (e) => e.preventDefault());   // keep the input focused
+      b.addEventListener('click', () => press(k));
+      pad.appendChild(b);
+    }
+
+    function press(k) {
+      const inp = target || Object.values(inputs)[0];
+      if (!inp || inp.disabled) return;
+      if (k === '⌫') inp.value = inp.value.slice(0, -1);
+      else inp.value += k;
+      inp.classList.remove('wrong');
+      focus(inp);
+    }
+
+    function submitNow() {
+      const values = {};
+      for (const [k, inp] of Object.entries(inputs)) values[k] = inp.value.trim();
+      const res = onSubmit(values);
+      if (!res) return;
+      for (const [k, inp] of Object.entries(inputs)) {
+        inp.classList.toggle('wrong', !!(res.wrong && res.wrong.includes(k)));
+        inp.classList.toggle('right', !!(res.right && res.right.includes(k)));
+      }
+      why.className = 'why-line ' + (res.ok ? 'good' : 'bad');
+      why.innerHTML = res.why || ' ';
+      if (res.ok || res.lock) {
+        Object.values(inputs).forEach((i) => { i.disabled = true; });
+        go.disabled = true;
+        pad.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      }
+    }
+
+    go.addEventListener('click', submitNow);
+    host.appendChild(box);
+    focus(Object.values(inputs)[0]);
+    return { box, inputs, why };
+  }
+
   /* ---------------- app registry ----------------
      Each app registers itself instead of starting on load, so the same source can run
      as a standalone page or as one view inside the bundled single-file build. */
@@ -352,7 +533,8 @@ const MathLab = (() => {
     rnd, rndNonZero, pick, sample, shuffle,
     parseTerm, signature, canon, sameExpression, splitTerms,
     formatTerm, formatSum, mathHTML, sup,
-    createGame, textAnswer,
+    createGame, textAnswer, choice, fields,
     app, run, listApps,
+    note, readLog, store,
   };
 })();

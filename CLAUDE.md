@@ -27,13 +27,18 @@ given, and a wrong answer always shows the right one.
   every step, goal reachable, refused moves leaving the line untouched, nothing thrown, the
   problem not already finished when it starts, and the end state genuinely finished judged
   by code written independently of `isSimplified`.
+- `node tools/check-linear.mjs [samples]` — the equations chapter: two independent solvers
+  must agree, every step keeps the solution, every trap is false at the answer.
+- `node tools/check-ui.mjs [rounds] [app…]` — headless Chrome at iPhone size, every level.
+- After changing any app: `node tools/bundle.mjs` (regenerates `index.html`, `dist/`,
+  `shared/all-apps.js`).
 
-Before trusting any new assertion, break the thing it covers and watch it fail. Seventeen
+Before trusting any new assertion, break the thing it covers and watch it fail. Twenty-six
 mutations have been bitten so far; two real defects were found only because a mutation
 that should have gone red did not.
 
 ## Adding an app
 1. Copy an `apps/*.html` file.
 2. Write level generators returning `{ prompt, question, given, hint, solution, mount }`.
-3. `MathLab.createGame({ key, levels })`.
-4. Add a tile to `index.html` and a row to README.md.
+3. Register with `MathLab.app(key, { …, build() { return levels; } })`, start with `MathLab.run(key)`.
+4. Add it to `ORDER` in `tools/bundle.mjs`, run the bundler (the hub is generated), add a row to README.md.

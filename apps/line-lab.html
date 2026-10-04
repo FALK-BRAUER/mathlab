@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line Lab · mathlab</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a class="back" href="../index.html">← All apps</a>
+    <h1>📈 Line Lab</h1>
+    <p class="tagline">Read a line, draw it, find where it hits the axes.</p>
+  </div>
+  <div id="game"></div>
+</main>
+
+<script src="../shared/engine.js"></script>
+<script src="../shared/linear.js"></script>
+<script src="../shared/grid.js"></script>
+<script>
+MathLab.app('line-lab', {
+  emoji: '📈',
+  title: 'Line Lab',
+  tagline: 'Read a line, draw it, find where it hits the axes.',
+  blurb: 'Gradient and intercept: read them, rearrange for them, draw the line on a grid.',
+
+  build() {
+  const { rnd, rndNonZero, pick, mathHTML, note } = MathLab;
+  const L = Linear;
+  const { Q, eq, neg, div, isZero, qHTML, qText, SLOPES } = L;
+
+  const lineHTML = (d) => L.dispHTML(d);
+  const pt = (x, y) => '(' + qText(x) + ', ' + qText(y) + ')';
+
+  /** The gradient a slip produces, named — so feedback can say WHICH mistake it was. */
+  function diagnoseGradient(got, m, c, written) {
+    if (isZero(got) && eq(L.abs(m), 1)) {
+      return { trap: 'implicit-one', why: (m.n < 0 ? '−x' : 'x') + ' means ' + qText(m) + ' × x. The gradient is ' + qText(m) + ', not 0.' };
+    }
+    if (written && eq(got, written) && !eq(written, m)) {
+      return { trap: 'coefficient-as-gradient', why: 'The number in front of x only gives the gradient once y is on its own.' };
+    }
+    if (eq(got, neg(m))) return { trap: 'gradient-sign', why: 'Check the sign of the gradient: ' + (m.n < 0 ? 'this line goes downhill, so it is negative.' : 'this line goes uphill, so it is positive.') };
+    if (eq(got, c) && !eq(c, m)) return { trap: 'm-c-swapped', why: 'You have the intercept there. The gradient is the number with x.' };
+    if (isZero(m)) return { trap: 'flat-gradient', why: 'There is no x at all, so the line is flat: gradient 0.' };
+    return { trap: 'gradient-other', why: 'The gradient is the number multiplying x once the line reads y = mx + c.' };
+  }
+
+  function diagnoseIntercept(got, m, c) {
+    if (eq(got, neg(c))) return { trap: 'intercept-sign', why: 'Check the sign: the line crosses the y-axis at ' + qText(c) + '.' };
+    if (!isZero(m) && eq(got, div(neg(c), m))) return { trap: 'intercept-x-axis', why: 'That is where it crosses the x-axis. The y-intercept is where x = 0.' };
+    if (eq(got, m) && !eq(c, m)) return { trap: 'm-c-swapped', why: 'That is the gradient. The y-intercept is the number on its own.' };
+    return { trap: 'intercept-other', why: 'Put x = 0: what is y? That is where it crosses the y-axis.' };
+  }
+
+  /* ---------------- ① read it ---------------- */
+
+  function readRound(frac) {
+    const kind = pick(['mc', 'mc', 'cm', 'negx', 'negx', 'flat', 'origin']);
+    let m, c;
+    if (kind === 'negx') { m = Q(pick([-1, -1, 1])); c = rndNonZero(-7, 7); }
+    else if (kind === 'flat') { m = Q(0); c = rndNonZero(-6, 6); }
+    else if (kind === 'origin') { m = pick(frac ? SLOPES.frac : SLOPES.whole); c = 0; }
+    else { m = pick(frac ? SLOPES.frac : SLOPES.whole); c = rnd(-7, 7); }
+    c = Q(c);
+    const e = L.lineMC(m, c);
+    const constFirst = kind === 'cm' || (kind === 'negx' && Math.random() < 0.5);
+    const shown = lineHTML(constFirst ? L.layoutFor(e, 'y', true) : L.layoutLine(e));
+
+    const round = {
+      prompt: 'What are the gradient and the y-intercept?',
+      question: shown,
+      solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c),
+      hint: 'Line it up with y = <i class="var">m</i>x + <i class="var">c</i>. The number with x is the gradient; the number on its own is where it crosses the y-axis.',
+      mount(stage, submit) {
+        MathLab.fields(stage, {
+          fields: [{ key: 'm', label: 'gradient', long: true }, { key: 'c', label: 'y-intercept', long: true }],
+          onSubmit(v) {
+            const gm = L.parseNumber(v.m), gc = L.parseNumber(v.c);
+            const empty = Object.keys(v).filter((k) => !v[k]);
+            if (empty.length) {
+              note('unfinished', { what: 'one of gradient/intercept' });
+              return { ok: false, why: 'Fill in both — the question asks for the gradient AND the intercept.', wrong: empty };
+            }
+            if (!gm || !gc) return { ok: false, why: 'I can\'t read that. Use a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
+            const okM = eq(gm, m), okC = eq(gc, c);
+            if (okM && okC) { submit(true); return { ok: true, right: ['m', 'c'] }; }
+            const why = [];
+            if (!okM) { const d = diagnoseGradient(gm, m, c); note('trap', { trap: d.trap }); why.push(d.why); }
+            if (!okC) { const d = diagnoseIntercept(gc, m, c); note('trap', { trap: d.trap }); why.push(d.why); }
+            submit(false, 0, why.join(' '));
+            return { ok: false, lock: true, why: '', wrong: [!okM && 'm', !okC && 'c'].filter(Boolean), right: [okM && 'm', okC && 'c'].filter(Boolean) };
+          },
+        });
+      },
+    };
+    return round;
+  }
+
+  /* ---------------- ② rearrange first ---------------- */
+
+  function rearrangeRound(frac) {
+    const { eq: e0, m, c } = L.mcLine({ frac: frac || Math.random() < 0.5, cRange: 6 });
+    let e = L.normal(e0);
+    if (isZero(L.coef(e, 'y'))) return rearrangeRound(frac);
+    if (Math.random() < 0.4) e = L.scale(e, -1);
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y'), k = e.k;
+    const style = pick(['std', 'std', 'zero', 'by']);
+    const disp = style === 'zero' ? L.layoutZero(e, ['x', 'y'])
+      : style === 'by' ? { L: [L.T(b, 'y')], R: [L.T(k), L.T(neg(a), 'x')] }
+      : L.layoutStd(e, ['x', 'y']);
+    const steps = (isZero(a) ? '' : lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(k)] }) + ', then ÷ ' + qHTML(b) + ': ') + lineHTML(L.layoutLine(e));
+
+    return {
+      prompt: 'Get <i class="var">y</i> on its own first. Gradient and y-intercept?',
+      question: lineHTML(disp),
+      solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c) + ' &nbsp;(' + steps + ')',
+      hint: 'Move the x-term to the other side (its sign flips), then divide EVERY term by the number in front of y.',
+      mount(stage, submit) {
+        MathLab.fields(stage, {
+          fields: [{ key: 'm', label: 'gradient', long: true }, { key: 'c', label: 'y-intercept', long: true }],
+          onSubmit(v) {
+            const empty = Object.keys(v).filter((key) => !v[key]);
+            if (empty.length) {
+              note('unfinished', { what: 'one of gradient/intercept' });
+              return { ok: false, why: 'Fill in both.', wrong: empty };
+            }
+            const gm = L.parseNumber(v.m), gc = L.parseNumber(v.c);
+            if (!gm || !gc) return { ok: false, why: 'Use a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
+            const okM = eq(gm, m), okC = eq(gc, c);
+            if (okM && okC) { submit(true); return { ok: true, right: ['m', 'c'] }; }
+            const why = [];
+            if (!okM) {
+              let d;
+              if (eq(gm, neg(a)) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'You moved the x-term — now divide by ' + qText(b) + ' as well.' };
+              else d = diagnoseGradient(gm, m, c, a);
+              note('trap', { trap: d.trap }); why.push(d.why);
+            }
+            if (!okC) {
+              let d;
+              if (eq(gc, k) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'Divide the number by ' + qText(b) + ' too — every term.' };
+              else d = diagnoseIntercept(gc, m, c);
+              note('trap', { trap: d.trap }); why.push(d.why);
+            }
+            submit(false, 0, why.join(' '));
+            return { ok: false, lock: true, wrong: [!okM && 'm', !okC && 'c'].filter(Boolean), right: [okM && 'm', okC && 'c'].filter(Boolean) };
+          },
+        });
+      },
+    };
+  }
+
+  /* ---------------- ③ draw it ---------------- */
+
+  const lineThrough = (p, q) => {
+    const a = q.y - p.y, b = p.x - q.x;
+    return L.E({ x: a, y: b }, a * p.x + b * p.y);
+  };
+
+  function drawRound(target, prompt) {
+    const { e, m, c, label } = target;
+    return {
+      prompt: prompt || 'Tap two points on this line. (Drag to adjust before you let go.)',
+      question: label,
+      solution: label,
+      noHint: false,
+      hint: m === null ? 'Every point on this line has the same ' + (isZero(L.coef(e, 'y')) ? 'x' : 'y') + '.'
+        : 'Start where it crosses the y-axis: (0, ' + qText(c) + '). Then the gradient ' + qText(m) + ' says how far up for each step across.',
+      mount(stage, submit) {
+        const grid = Grid.create(stage, {});
+        const pick2 = Grid.picker(grid, { max: 2, line: true });
+        const row = document.createElement('div');
+        row.className = 'answer-row';
+        row.innerHTML = '<button type="button">Check my line</button>';
+        stage.appendChild(row);
+        const why = document.createElement('p');
+        why.className = 'why-line';
+        stage.appendChild(why);
+        const btn = row.querySelector('button');
+        btn.addEventListener('click', () => {
+          const pts = pick2.points();
+          if (pts.length < 2) {
+            note('unfinished', { what: 'one point' });
+            why.className = 'why-line bad';
+            why.innerHTML = 'Two points make a line — tap one more.';
+            return;
+          }
+          pick2.stop();
+          btn.disabled = true;
+          const user = lineThrough(pts[0], pts[1]);
+          if (L.sameLine(user, e)) {
+            grid.line(e, { cls: 'good' });
+            submit(true);
+            return;
+          }
+          grid.line(e, { cls: 'ghost', dashed: true, label: 'the line' });
+          let d;
+          const um = L.gradient(user), uc = L.yIntercept(user);
+          const onXAxisC = c && !isZero(c) && pts.some((p) => p.y === 0 && eq(Q(p.x), c));
+          if (m === null || isZero(L.coef(e, 'y'))) d = { trap: 'vertical-line', why: label.replace(/<[^>]+>/g, '') + ' is vertical: every point has the same x.' };
+          else if (isZero(m) && (um === null || !isZero(um))) d = { trap: 'flat-gradient', why: 'There is no x in it, so it is flat: every point has the same y.' };
+          else if (onXAxisC) d = { trap: 'intercept-x-axis', why: 'You put ' + qText(c) + ' on the x-axis. The y-intercept sits on the y-axis: (0, ' + qText(c) + ').' };
+          else if (um && eq(um, neg(m)) && !isZero(m)) d = { trap: 'gradient-sign', why: 'Your line slopes the wrong way. Gradient ' + qText(m) + (m.n < 0 ? ' goes DOWN' : ' goes UP') + ' from left to right.' };
+          else if (um && eq(um, m)) d = { trap: 'intercept-wrong', why: 'Right steepness! But it must cross the y-axis at (0, ' + qText(c) + ').' };
+          else if (uc && eq(uc, c)) d = { trap: 'gradient-wrong', why: 'Right start at (0, ' + qText(c) + '). Then for every ' + m.d + ' across, go ' + Math.abs(m.n) + (m.n < 0 ? ' down.' : ' up.') };
+          else d = { trap: 'line-other', why: 'Start at (0, ' + qText(c) + ') on the y-axis, then use the gradient to find the next point.' };
+          note('trap', { trap: d.trap });
+          submit(false, 0, d.why);
+        });
+      },
+    };
+  }
+
+  function mcTarget(frac) {
+    const { eq: e, m, c } = L.mcLine({ frac });
+    return { e, m, c, label: lineHTML(L.layoutLine(e)) };
+  }
+
+  function specialTarget() {
+    const k = rndNonZero(-5, 5);
+    const kind = pick(['vertical', 'horizontal', 'origin']);
+    if (kind === 'vertical') { const e = L.vertical(k); return { e, m: null, c: null, label: lineHTML(L.layoutLine(e)) }; }
+    if (kind === 'horizontal') { const e = L.horizontal(k); return { e, m: Q(0), c: Q(k), label: lineHTML(L.layoutLine(e)) }; }
+    const m = pick(SLOPES.whole);
+    const e = L.lineMC(m, 0);
+    return { e, m, c: Q(0), label: lineHTML(L.layoutLine(e)) };
+  }
+
+  /* ---------------- ④ intercepts ---------------- */
+
+  function interceptRound() {
+    const origin = Math.random() < 0.15;
+    if (origin) {
+      const m = pick(SLOPES.whole);
+      const e = L.normal(L.lineMC(m, 0));
+      return {
+        prompt: 'Tap where this line crosses the x-axis and where it crosses the y-axis.',
+        question: lineHTML(L.layoutStd(e, ['x', 'y'])),
+        solution: 'both are (0, 0) — it goes through the origin, so you need one more point to draw it',
+        hint: 'Put y = 0 and solve for x. Then put x = 0 and solve for y. Something special happens here.',
+        mount(stage, submit) { originMount(stage, submit, e); },
+      };
+    }
+    const { eq: e, xInt, yInt } = L.interceptLine();
+    const disp = Math.random() < 0.25 ? L.layoutZero(e, ['x', 'y']) : L.layoutStd(e, ['x', 'y']);
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    const working = 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + ', so x = ' + qHTML(xInt) + ' → ' + pt(xInt, 0) +
+      '. Put x = 0: ' + lineHTML({ L: [L.T(b, 'y')], R: [L.T(e.k)] }) + ', so y = ' + qHTML(yInt) + ' → ' + pt(0, yInt) + '.';
+    return {
+      prompt: 'Tap the two points where this line crosses the axes.',
+      question: lineHTML(disp),
+      solution: pt(xInt, 0) + ' and ' + pt(0, yInt),
+      hint: 'On the x-axis y = 0. On the y-axis x = 0. Put each one in and solve.',
+      mount(stage, submit) {
+        const grid = Grid.create(stage, {});
+        const pick2 = Grid.picker(grid, { max: 2, line: true });
+        const row = document.createElement('div');
+        row.className = 'answer-row';
+        row.innerHTML = '<button type="button">Check</button>';
+        stage.appendChild(row);
+        const why = document.createElement('p');
+        why.className = 'why-line';
+        stage.appendChild(why);
+        const btn = row.querySelector('button');
+        btn.addEventListener('click', () => {
+          const pts = pick2.points();
+          if (pts.length < 2) {
+            note('unfinished', { what: 'one intercept' });
+            why.className = 'why-line bad';
+            why.innerHTML = 'A line like this crosses BOTH axes — find the other one too.';
+            return;
+          }
+          pick2.stop();
+          btn.disabled = true;
+          const want = [{ x: L.num(xInt), y: 0 }, { x: 0, y: L.num(yInt) }];
+          const has = (w) => pts.some((p) => p.x === w.x && p.y === w.y);
+          if (has(want[0]) && has(want[1])) {
+            grid.line(e, { cls: 'good' });
+            want.forEach((w) => grid.point(w.x, w.y, { cls: 'good' }));
+            submit(true, undefined, working);
+            return;
+          }
+          grid.line(e, { cls: 'ghost', dashed: true });
+          want.forEach((w) => grid.point(w.x, w.y, { cls: 'good' }));
+          let d;
+          if (pts.some((p) => p.x === want[0].x && p.y === want[1].y && p.x !== 0 && p.y !== 0)) {
+            d = { trap: 'intercepts-merged', why: 'You joined the two answers into one point ' + pt(xInt, yInt) + '. An intercept sits ON an axis, so one of its numbers is always 0: ' + pt(xInt, 0) + ' and ' + pt(0, yInt) + '.' };
+          } else if (pts.some((p) => p.x === want[1].y && p.y === 0) && pts.some((p) => p.x === 0 && p.y === want[0].x)) {
+            d = { trap: 'intercepts-swapped', why: 'Swapped: the x-intercept comes from putting y = 0. ' + working };
+          } else if (pts.some((p) => (p.x === -want[0].x && p.y === 0 && p.x !== 0) || (p.x === 0 && p.y === -want[1].y && p.y !== 0))) {
+            d = { trap: 'intercept-sign', why: 'Check the sign when you divide. ' + working };
+          } else {
+            d = { trap: 'intercept-other', why: working };
+          }
+          note('trap', { trap: d.trap });
+          submit(false, 0, d.why);
+        });
+      },
+    };
+  }
+
+  function originMount(stage, submit, e) {
+    const grid = Grid.create(stage, {});
+    const pick2 = Grid.picker(grid, { max: 2, line: true });
+    const row = document.createElement('div');
+    row.className = 'answer-row';
+    row.innerHTML = '<button type="button">Check</button>';
+    stage.appendChild(row);
+    const why = document.createElement('p');
+    why.className = 'why-line';
+    stage.appendChild(why);
+    row.querySelector('button').addEventListener('click', () => {
+      const pts = pick2.points();
+      const onLine = pts.filter((p) => L.satisfies(e, { x: Q(p.x), y: Q(p.y) }));
+      const hasO = pts.some((p) => p.x === 0 && p.y === 0);
+      if (pts.length === 1 && hasO) {
+        why.className = 'why-line';
+        why.innerHTML = 'Yes — both intercepts are the origin! One point can\'t make a line, so tap one more point on it.';
+        return;
+      }
+      pick2.stop();
+      row.querySelector('button').disabled = true;
+      if (hasO && onLine.length === 2) {
+        grid.line(e, { cls: 'good' });
+        submit(true, undefined, 'Both intercepts are (0, 0), so a second point is needed to draw it.');
+      } else {
+        grid.line(e, { cls: 'ghost', dashed: true });
+        note('trap', { trap: hasO ? 'origin-second-point' : 'intercept-other' });
+        submit(false, 0, hasO ? 'Right about the origin. Your second point is not on the line — try x = 1.' : 'Put y = 0: x comes out 0 too. The line goes through the origin (0, 0).');
+      }
+    });
+  }
+
+  /* ---------------- ⑤ special lines ---------------- */
+
+  function specialRound() {
+    if (Math.random() < 0.5) return drawRound(specialTarget(), 'Tap two points on this line.');
+    const k = rndNonZero(-6, 6);
+    const kinds = [
+      { key: 'v', label: 'Vertical — straight up and down', e: L.vertical(k) },
+      { key: 'h', label: 'Horizontal — flat', e: L.horizontal(k) },
+      { key: 'o', label: 'Slanted, through the origin', e: L.lineMC(pick(SLOPES.whole), 0) },
+      { key: 's', label: 'Slanted, not through the origin', e: L.lineMC(pick(SLOPES.whole), k) },
+    ];
+    const target = pick(kinds);
+    const why = {
+      v: 'x = ' + qText(k) + ' means every point has x = ' + qText(k) + ' — whatever y is. That is a vertical line; it has no y = mx + c form.',
+      h: 'y = ' + qText(k) + ' means every point has y = ' + qText(k) + '. Flat: gradient 0.',
+      o: 'No number on its own, so when x = 0, y = 0: it goes through the origin.',
+      s: 'It has an x-term (slanted) and a number on its own (misses the origin).',
+    };
+    return {
+      prompt: 'What kind of line is this?',
+      question: lineHTML(L.layoutLine(target.e)),
+      solution: target.label,
+      hint: 'Ask: which letters are in it? Is there a number on its own?',
+      mount(stage, submit) {
+        const opts = MathLab.shuffle(kinds.map((kd) => ({
+          html: kd.label,
+          ok: kd.key === target.key,
+          trap: target.key === 'v' && kd.key === 'h' ? 'x-equals-horizontal' : 'line-kind',
+          why: kd.key === target.key ? why[kd.key] : why[target.key],
+        })));
+        MathLab.choice(stage, {
+          options: opts,
+          onDone(misses) {
+            const grid = Grid.create(stage, {});
+            grid.line(target.e, { cls: 'good' });
+            submit(misses === 0, undefined, why[target.key]);
+          },
+        });
+      },
+    };
+  }
+
+  const MIX = [
+    () => readRound(false), () => rearrangeRound(false), () => drawRound(mcTarget(false)),
+    () => interceptRound(), () => specialRound(),
+  ];
+  const SPICY = [() => readRound(true), () => rearrangeRound(true), () => drawRound(mcTarget(true))];
+
+  return [
+    { name: '① Read it', make: () => readRound(false) },
+    { name: '② Rearrange first', make: () => rearrangeRound(false) },
+    { name: '③ Draw it', make: () => drawRound(mcTarget(Math.random() < 0.3)) },
+    { name: '④ Intercepts', make: interceptRound },
+    { name: '⑤ Special lines', make: specialRound },
+    { name: 'Mixed', make: () => pick(MIX)() },
+    { name: '🌶 Spicy', make: () => pick(SPICY)() },
+  ];
+  },
+});
+</script>
+<script>MathLab.run('line-lab');</script>
+</body>
+</html>
