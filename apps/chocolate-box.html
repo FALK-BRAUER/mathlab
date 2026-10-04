@@ -11,18 +11,18 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>🍫 Chocolate Box</h1>
-    <p class="tagline">Turn the story into an expression. Then put a number in.</p>
+    <p class="tagline">Turn the story into maths. Then put a number in.</p>
   </div>
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
 <script>
 MathLab.app('chocolate-box', {
   emoji: '🍫',
   title: 'Chocolate Box',
-  tagline: 'Turn the story into an expression. Then put a number in.',
-  blurb: 'Word problems: write the expression first, then work out the number.',
+  tagline: 'Turn the story into maths. Then put a number in.',
+  blurb: 'Word problems. Pick the expression first. Then work out the number.',
 
   build() {
   const { rnd, pick, shuffle, mathHTML } = MathLab;
@@ -38,9 +38,9 @@ MathLab.app('chocolate-box', {
       ask: 'Which expression says how many are <b>left</b>?',
       right: { text: N + ' − x', f: (x) => N - x },
       wrong: [
-        { text: 'x − ' + N, f: (x) => x - N, why: 'That is the wrong way round — it gives a negative answer.' },
-        { text: N + ' + x', f: (x) => N + x, why: 'Eating them makes the number go down, not up.' },
-        { text: N + ' ÷ x', f: (x) => N / x, why: 'Nothing here is being shared out.' },
+        { text: 'x − ' + N, f: (x) => x - N, why: 'That is the wrong way round. It gives a negative answer.' },
+        { text: N + ' + x', f: (x) => N + x, why: 'Eating chocolates makes the number go down, not up.' },
+        { text: N + ' ÷ x', f: (x) => N / x, why: 'Nothing is being shared out here.' },
       ],
       value: rnd(3, 9),
       letter: 'x',
@@ -51,13 +51,13 @@ MathLab.app('chocolate-box', {
     const N = pick([16, 20, 24, 28]);
     return {
       story: 'There are <b>' + N + '</b> chocolates. Aislin eats <i class="var">x</i>. ' +
-             'Brindi then eats <b>half</b> of the ones that are left.',
+             'Then Brindi eats <b>half</b> of what is left.',
       ask: 'Which expression says how many <b>Brindi</b> eats?',
       right: { text: '(' + N + ' − x) ÷ 2', f: (x) => (N - x) / 2 },
       wrong: [
-        { text: N + ' − x ÷ 2', f: (x) => N - x / 2, why: 'Without the bracket, only the x gets halved.' },
-        { text: N + ' ÷ 2 − x', f: (x) => N / 2 - x, why: 'That halves the box first, before Aislin eats.' },
-        { text: '(' + N + ' + x) ÷ 2', f: (x) => (N + x) / 2, why: 'Aislin eating makes the pile smaller.' },
+        { text: N + ' − x ÷ 2', f: (x) => N - x / 2, why: 'Without a bracket, only the x gets halved.' },
+        { text: N + ' ÷ 2 − x', f: (x) => N / 2 - x, why: 'That halves the box before Aislin eats.' },
+        { text: '(' + N + ' + x) ÷ 2', f: (x) => (N + x) / 2, why: 'Aislin eats some, so the pile gets smaller, not bigger.' },
       ],
       value: pick([4, 8, 10, 14]).valueOf() <= N ? pick([4, 8, 10]) : 4,
       letter: 'x',
@@ -68,14 +68,14 @@ MathLab.app('chocolate-box', {
     const price = rnd(2, 6);
     const paid = pick([20, 50]);
     return {
-      story: 'A bag of sweets costs <b>$' + price + '</b>. You buy <i class="var">n</i> bags ' +
-             'and pay with a <b>$' + paid + '</b> note.',
+      story: 'A bag of sweets costs <b>$' + price + '</b>. You buy <i class="var">n</i> bags. ' +
+             'You pay with a <b>$' + paid + '</b> note.',
       ask: 'Which expression says your <b>change</b>?',
       right: { text: paid + ' − ' + price + 'n', f: (n) => paid - price * n },
       wrong: [
-        { text: price + 'n − ' + paid, f: (n) => price * n - paid, why: 'Wrong way round — the note is bigger than the bill.' },
-        { text: paid + ' − ' + price + ' + n', f: (n) => paid - price + n, why: 'The price has to be multiplied by how many bags.' },
-        { text: '(' + paid + ' − ' + price + ')n', f: (n) => (paid - price) * n, why: 'Only the bags are multiplied, not the change.' },
+        { text: price + 'n − ' + paid, f: (n) => price * n - paid, why: 'That is the wrong way round. The note is worth more than the bill.' },
+        { text: paid + ' − ' + price + ' + n', f: (n) => paid - price + n, why: 'Multiply the price by the number of bags.' },
+        { text: '(' + paid + ' − ' + price + ')n', f: (n) => (paid - price) * n, why: 'Only the price gets multiplied by n. The $' + paid + ' does not.' },
       ],
       value: rnd(2, 5),
       letter: 'n',
@@ -85,14 +85,14 @@ MathLab.app('chocolate-box', {
   function perimeter() {
     const less = rnd(2, 6);
     return {
-      story: 'A rectangle is <i class="var">x</i> cm long. It is <b>' + less +
-             ' cm shorter</b> than that across.',
+      story: 'A rectangle is <i class="var">x</i> cm long. Its width is <b>' + less +
+             ' cm less</b> than that.',
       ask: 'Which expression says the <b>perimeter</b>?',
       right: { text: '4x − ' + 2 * less, f: (x) => 4 * x - 2 * less },
       wrong: [
-        { text: '2x − ' + less, f: (x) => 2 * x - less, why: 'That is only one long side and one short side.' },
-        { text: '4x − ' + less, f: (x) => 4 * x - less, why: 'There are two short sides, so the ' + less + ' comes off twice.' },
-        { text: 'x(x − ' + less + ')', f: (x) => x * (x - less), why: 'That is the area, not the distance round.' },
+        { text: '2x − ' + less, f: (x) => 2 * x - less, why: 'That is only one long side and one short side. A rectangle has four sides.' },
+        { text: '4x − ' + less, f: (x) => 4 * x - less, why: 'There are two short sides. So take off ' + less + ' twice.' },
+        { text: 'x(x − ' + less + ')', f: (x) => x * (x - less), why: 'That is the area. The perimeter is the distance all the way round.' },
       ],
       value: rnd(5, 12),
       letter: 'x',
@@ -108,9 +108,9 @@ MathLab.app('chocolate-box', {
       ask: 'Which expression says how many each friend gets?',
       right: { text: '(' + N + ' − ' + left + ') ÷ n', f: (n) => (N - left) / n },
       wrong: [
-        { text: N + ' ÷ n − ' + left, f: (n) => N / n - left, why: 'The leftovers come off the whole pile, before sharing.' },
-        { text: N + ' ÷ n + ' + left, f: (n) => N / n + left, why: 'The leftovers are not given to anyone.' },
-        { text: '(' + N + ' + ' + left + ') ÷ n', f: (n) => (N + left) / n, why: 'There are fewer to share, not more.' },
+        { text: N + ' ÷ n − ' + left, f: (n) => N / n - left, why: 'Take the leftovers off the whole pile first. Then share.' },
+        { text: N + ' ÷ n + ' + left, f: (n) => N / n + left, why: 'Nobody gets the leftovers. Take them away, do not add them.' },
+        { text: '(' + N + ' + ' + left + ') ÷ n', f: (n) => (N + left) / n, why: 'The leftovers mean fewer to share, not more.' },
       ],
       value: pick([1, 2, 5, 7].filter((d) => (N - left) % d === 0)) || 1,
       letter: 'n',
@@ -126,10 +126,10 @@ MathLab.app('chocolate-box', {
     return {
       prompt: s.story,
       question: '',
-      hint: 'Read it again one clause at a time, and write down what each clause does. ' +
-            'If something happens to a whole amount, that amount needs a bracket round it.',
+      hint: 'Read one sentence at a time. Write down what each part does. ' +
+            'If something happens to a whole amount, put a bracket round it.',
       solution: s.right.text,
-      rightWhy: 'Each clause of the story became one part of the expression.',
+      rightWhy: 'Yes! Each part of the story became one part of the expression.',
       explain: '<ol><li>The expression is <b>' + mathHTML(s.right.text) + '</b>.</li>' +
         s.wrong.map((w) => '<li>Not ' + mathHTML(w.text) + ': ' + w.why + '</li>').join('') + '</ol>',
 
@@ -168,7 +168,7 @@ MathLab.app('chocolate-box', {
 
           why.className = 'why-line ' + (opt.ok ? 'good' : 'bad');
           why.innerHTML = opt.ok
-            ? 'Yes — ' + mathHTML(s.right.text) + ' does each thing in the story, in order. Now put a number in.'
+            ? 'Yes! ' + mathHTML(s.right.text) + ' does each step of the story in order. Now put a number in.'
             : opt.why + ' The expression is <b>' + mathHTML(s.right.text) + '</b>.';
 
           askValue(opt.ok);
@@ -181,8 +181,8 @@ MathLab.app('chocolate-box', {
           const box2 = document.createElement('div');
           box2.className = 'banned';
           box2.innerHTML =
-            '<b>Now use it</b><p>Work out the answer when <i class="var">' + s.letter +
-            '</i> = <b>' + s.value + '</b>, using ' + mathHTML(s.right.text) + '.</p>' +
+            '<b>Now use it</b><p>Find the answer when <i class="var">' + s.letter +
+            '</i> = <b>' + s.value + '</b>. Use ' + mathHTML(s.right.text) + '.</p>' +
             '<div data-stage2></div>';
           stage.appendChild(box2);
 
@@ -190,8 +190,8 @@ MathLab.app('chocolate-box', {
             const line = document.createElement('p');
             line.className = 'why-line ' + (ok ? 'good' : 'bad');
             line.innerHTML = ok
-              ? 'Correct — ' + s.right.text.replace(new RegExp(s.letter, 'g'), s.value) + ' = ' + want + '.'
-              : 'It comes to <b>' + want + '</b>: ' +
+              ? 'Correct! ' + s.right.text.replace(new RegExp(s.letter, 'g'), s.value) + ' = ' + want + '.'
+              : 'Not quite. The answer is <b>' + want + '</b>: ' +
                 s.right.text.replace(new RegExp(s.letter, 'g'), s.value) + '.';
             box2.appendChild(line);
 

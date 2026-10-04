@@ -11,18 +11,18 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>🔍 HCF Detective</h1>
-    <p class="tagline">Break both terms apart. Whatever is in both is the answer.</p>
+    <p class="tagline">Break both terms into pieces. The pieces they share are the answer.</p>
   </div>
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
 <script>
 MathLab.app('hcf-detective', {
   emoji: '🔍',
   title: 'HCF Detective',
-  tagline: 'Break both terms apart. Whatever is in both is the answer.',
-  blurb: 'Find what two terms have in common — the highest common factor.',
+  tagline: 'Break both terms into pieces. The pieces they share are the answer.',
+  blurb: 'Find the biggest piece two terms share. That is the highest common factor (HCF).',
 
   build() {
   const { rnd, pick, shuffle, mathHTML, sup } = MathLab;
@@ -118,7 +118,7 @@ MathLab.app('hcf-detective', {
     const pickSome = () => shuffle(all.slice()).slice(0, rnd(1, 3));
     const a = randomTerm(pickSome(), 3);
     const b = randomTerm(pickSome(), 3);
-    return { a, b, note: 'Take the lower power of each letter — and only what appears in both.' };
+    return { a, b, note: 'Only take letters that are in both terms. Use the lower power of each.' };
   }
 
   /** The worksheet's harder pair: a whole bracket counts as one piece. */
@@ -127,7 +127,7 @@ MathLab.app('hcf-detective', {
     const block = '(' + x + ' + 1)';
     const a = { c: rnd(2, 6), v: { [x]: 2 }, blocks: [block] };
     const b = { c: 1, v: { [x]: 1 }, blocks: [block] };
-    return { a, b, note: 'A bracket is one piece. It is either in both or it is not — you never break it open.' };
+    return { a, b, note: 'A bracket counts as one piece. Never break it open. It is in both terms or it is not.' };
   }
 
   function round() {
@@ -136,23 +136,23 @@ MathLab.app('hcf-detective', {
     const want = shared(pa, pb);
 
     return {
-      prompt: 'Tap the pieces of the <b>first</b> term that also appear in the second.',
+      prompt: 'Tap the pieces of the <b>first</b> term that are also in the second.',
       question: mathHTML(label(a)) + '<span class="hcf-and">and</span>' + mathHTML(label(b)),
-      hint: note + ' If nothing is shared, the highest common factor is just 1.',
+      hint: note + ' If they share nothing, the HCF is 1.',
       solution: asTerm(want),
-      rightWhy: 'Exactly the pieces in both terms, multiplied together.',
+      rightWhy: 'Yes! You took exactly the pieces in both terms. Multiply them for the HCF.',
       explain: '<ol><li>Break the first term into pieces: ' + pa.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
         '<li>Break the second into pieces: ' + pb.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
-        '<li>Keep only pieces that appear in BOTH (as many times as the fewer one has): ' + (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'none') + '.</li>' +
+        '<li>Keep only the pieces in BOTH. If a piece repeats, keep the smaller count: ' + (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'none') + '.</li>' +
         '<li>Multiply them: HCF = <b>' + mathHTML(asTerm(want)) + '</b>.</li></ol>',
 
       mount(stage, submit) {
         const chosen = [];
 
         stage.innerHTML = `
-          <p class="piece-label">First term, broken up — tap what is also in the second</p>
+          <p class="piece-label">First term in pieces. Tap the ones the second term has too.</p>
           <div class="chips" data-a></div>
-          <p class="piece-label">Second term, for comparing</p>
+          <p class="piece-label">Second term in pieces, to compare</p>
           <div class="chips" data-b></div>
           <p class="why-line" data-why> </p>
           <div class="answer-row"><button type="button" data-check>Check</button></div>
@@ -195,8 +195,8 @@ MathLab.app('hcf-detective', {
           const answer = asTerm(want);
           why.className = 'why-line ' + (right ? 'good' : 'bad');
           why.innerHTML = right
-            ? 'Multiply those together and that is the HCF: <b>' + mathHTML(answer) + '</b>.'
-            : 'The pieces in both are ' +
+            ? 'Right pieces! Multiply them to get the HCF: <b>' + mathHTML(answer) + '</b>.'
+            : 'Not quite. The pieces in both are ' +
               (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'nothing') +
               ', so the HCF is <b>' + mathHTML(answer) + '</b>.';
 

@@ -202,7 +202,7 @@ const Algebra = (() => {
         return T(t.c / signed, v);
       });
       return { kind: 'common', item: { k: 'b', m: common, ts: inside },
-               why: 'Every term contains <b>' + fmt(common, false) + '</b>, so it comes out to the front.' };
+               why: 'Every term contains <b>' + fmt(common, false) + '</b>. So it comes out to the front.' };
     }
 
     // 2 — square minus square
@@ -211,7 +211,7 @@ const Algebra = (() => {
       const A = sqrtTerm(terms[0]);
       const B = sqrtTerm({ ...terms[1], c: -terms[1].c });
       return { kind: 'dots', item: { k: 'p', m: T(1), a: [A, B], b: [A, T(-B.c, B.v)] },
-               why: 'A square minus a square is always (first + second)(first − second).' };
+               why: 'A square minus a square always splits like this: (first + second)(first − second).' };
     }
 
     // 3 — x² + px + q, split by two numbers that add to p and multiply to q.
@@ -230,7 +230,7 @@ const Algebra = (() => {
             const x = vs[0];
             return { kind: 'vieta',
                      item: { k: 'p', m: T(1), a: [T(1, { [x]: 1 }), T(m)], b: [T(1, { [x]: 1 }), T(n)] },
-                     why: m + ' and ' + n + ' add to ' + p + ' and multiply to ' + q + '.' };
+                     why: m + ' and ' + n + ' add to ' + p + '. They multiply to ' + q + '.' };
           }
         }
       }
@@ -350,14 +350,14 @@ const Algebra = (() => {
       const it = items[at];
       const opened = scale(mulSums(it.a, it.b), it.m);
       return { next: [...items.slice(0, at), ...opened, ...items.slice(at + 1)],
-               why: 'Every term in the first bracket multiplies every term in the second.' };
+               why: 'Multiply every term in the first bracket by every term in the second.' };
     }
     at = find(items, 'b');
     const it = items[at];
     const opened = scale(it.ts, it.m);
     const why = it.m.c === -1 && isConst(it.m)
-      ? 'A minus in front flips the sign of <b>every</b> term inside — not just the first.'
-      : 'The <b>' + fmt(it.m, false) + '</b> outside touches <b>every</b> term inside.';
+      ? 'A minus in front flips the sign of <b>every</b> term inside. Not just the first one.'
+      : 'The <b>' + fmt(it.m, false) + '</b> outside multiplies <b>every</b> term inside.';
     return { next: [...items.slice(0, at), ...opened, ...items.slice(at + 1)], why };
   }
 
@@ -371,18 +371,18 @@ const Algebra = (() => {
       const coeffs = it.fs.map((f) => Math.abs(f.c));
       const product = coeffs.reduce((a, b) => a * b, 1);
       why = 'The numbers in front <b>multiply</b> (' + coeffs.join(' × ') + ' = ' + product +
-            ') and the small numbers <b>add</b>: ' +
+            '). The powers <b>add</b>: ' +
             it.fs.map((f) => fmt(f, false)).join(' · ') + ' = ' + fmt(merged, false) + '.';
     } else if (it.k === 'd') {
       merged = divTerm(it.a, it.b);
       why = isConst(merged) && merged.c === 1
-        ? 'Dividing <b>subtracts</b> the small numbers — and they cancel to nothing. ' +
-          'Anything over itself is 1, which is exactly why x⁰ = 1.'
-        : 'Dividing powers of the same letter <b>subtracts</b> the small numbers: ' +
+        ? 'Dividing <b>takes away</b> the powers. Here they cancel to nothing. ' +
+          'Anything divided by itself is 1. That is why x⁰ = 1.'
+        : 'Dividing powers of the same letter <b>takes away</b> the powers: ' +
           fmt(it.a, false) + ' ÷ ' + fmt(it.b, false) + ' = ' + fmt(merged, false) + '.';
     } else {
       merged = powTerm(it.base, it.n);
-      why = 'A power of a power <b>multiplies</b> the small numbers: (' + fmt(it.base, false) +
+      why = 'A power of a power <b>multiplies</b> the powers: (' + fmt(it.base, false) +
             ')' + MathLab.sup(it.n) + ' = ' + fmt(merged, false) + '.';
     }
 
@@ -396,20 +396,20 @@ const Algebra = (() => {
       const num = joinableIn(f.num) ? collect(f.num) : f.num.map(cloneItem);
       const den = joinableIn(f.den) ? collect(f.den) : f.den.map(cloneItem);
       return { next: [{ k: 'f', num, den }],
-               why: 'Collected the matching blocks — inside the top and bottom only. ' +
-                    'You never collect <i>across</i> the fraction line.' };
+               why: 'You joined matching blocks inside the top and inside the bottom. ' +
+                    'Never join <i>across</i> the fraction line.' };
     }
 
     const terms = items.filter((it) => it.k === 't');
     const others = items.filter((it) => it.k !== 't');
 
-    let why = 'Collected the blocks that match.';
+    let why = 'You joined the blocks that match.';
     const seen = new Map();
     for (const t of terms) {
       const s = sig(t);
       if (seen.has(s)) {
         why = seen.get(s) + ' and ' + t.c + ' make ' + (seen.get(s) + t.c) +
-              ' of the same shape — the letters and powers do not change.';
+              ' of the same shape. The letters and powers stay the same.';
         break;
       }
       seen.set(s, t.c);
@@ -433,7 +433,7 @@ const Algebra = (() => {
       return { next: [{ k: 'p', m: mulTerm(outer, inner.item.m || T(1)),
                         a: inner.item.k === 'p' ? inner.item.a : inner.item.ts,
                         b: inner.item.k === 'p' ? inner.item.b : [T(1)] }],
-               why: 'The bracket itself still factorises. ' + inner.why };
+               why: 'The bracket can still be split into a product. ' + inner.why };
     }
 
     const fa = factorisation(items);
@@ -454,8 +454,8 @@ const Algebra = (() => {
           b: brKey(d.brs[1]) === brKey(pair.b) ? flipped : d.brs[1].map(cloneTerm) };
 
     return { next: [{ k: 'f', num: f.num.map(cloneItem), den: [rebuilt] }],
-             why: '(' + fmtSum(pair.b) + ') is just −(' + fmtSum(flipped) + '). ' +
-                  'Pull the minus out and the two brackets match.' };
+             why: '(' + fmtSum(pair.b) + ') is the same as −(' + fmtSum(flipped) + '). ' +
+                  'Take the minus out and the two brackets match.' };
   }
 
   function cancelBlock(items) {
@@ -475,8 +475,8 @@ const Algebra = (() => {
       const num = strip(f.num), den = strip(f.den);
       const folded = foldUnitDenominator(num, den);
       return { next: folded || [{ k: 'f', num, den }],
-               why: 'The block (' + fmtSum(shared) + ') is on the top <i>and</i> the bottom, so it cancels. ' +
-                    'Whole blocks only — never across a + or a −.' };
+               why: 'The block (' + fmtSum(shared) + ') is on the top <i>and</i> the bottom. So it cancels. ' +
+                    'Only cancel whole blocks. Never cancel across a + or a −.' };
     }
 
     const cm = commonMultiplier(f);
@@ -495,8 +495,8 @@ const Algebra = (() => {
 
     const removed = T(cm.g, cm.shared);
     return { next: folded || [{ k: 'f', num, den }],
-             why: 'Top and bottom both contain <b>' + fmt(removed, false) + '</b>, so it cancels. ' +
-                  'Whole factors only — never across a + or a −.' };
+             why: 'Top and bottom both contain <b>' + fmt(removed, false) + '</b>. So it cancels. ' +
+                  'Only cancel whole blocks. Never cancel across a + or a −.' };
   }
 
   /** Two fractions divided becomes two fractions multiplied, with the second turned over. */
@@ -505,7 +505,7 @@ const Algebra = (() => {
     const it = items[at];
     const turned = { k: 'f', num: it.b.den.map(cloneItem), den: it.b.num.map(cloneItem) };
     return { next: [...items.slice(0, at), { k: 'x', op: '*', a: cloneItem(it.a), b: turned }, ...items.slice(at + 1)],
-             why: 'Dividing by a fraction is multiplying by it turned upside down.' };
+             why: 'To divide by a fraction, turn it upside down and multiply.' };
   }
 
   const asTerm = (side) => (side.length === 1 && side[0].k === 't' ? side[0] : null);
@@ -516,7 +516,7 @@ const Algebra = (() => {
     const num = mulTerm(asTerm(it.a.num), asTerm(it.b.num));
     const den = mulTerm(asTerm(it.a.den), asTerm(it.b.den));
     return { next: [...items.slice(0, at), { k: 'f', num: [num], den: [den] }, ...items.slice(at + 1)],
-             why: 'Multiplying fractions goes straight across: tops together, bottoms together.' };
+             why: 'To multiply fractions, go straight across. Top times top, bottom times bottom.' };
   }
 
   /** Put every fraction on the line over one denominator. */
@@ -535,8 +535,8 @@ const Algebra = (() => {
     for (const t of loose) num.push(mulTerm(t, T(L)));
 
     return { next: [{ k: 'f', num, den: [T(L)] }],
-             why: 'Same bottom first. ' + dens.map((d) => d.c).join(' and ') +
-                  ' both go into <b>' + L + '</b>, so everything is rewritten over ' + L + '.' };
+             why: 'Get the same bottom first. ' + dens.map((d) => d.c).join(' and ') +
+                  ' both go into <b>' + L + '</b>. So write everything over ' + L + '.' };
   }
 
   /* ================= move table ================= */
@@ -547,15 +547,15 @@ const Algebra = (() => {
       can: (items) => !theFraction(items) && (hasKind(items, 'b') || hasKind(items, 'p')),
       apply: openBracket,
       refuse: (items) => theFraction(items)
-        ? 'Not here. Brackets are what you <b>cancel</b> with — opening them throws away the thing you need.'
+        ? 'Not in a fraction. You <b>cancel</b> with brackets. Opening them loses what you need.'
         : 'There is no bracket left to open.',
     },
     power: {
       label: 'Use the power rule',
       can: hasPower,
       apply: usePowerRule,
-      refuse: () => 'Nothing here is being multiplied, divided or raised to a power. ' +
-                    'Those rules never apply to adding.',
+      refuse: () => 'Nothing here is multiplied, divided or raised to a power. ' +
+                    'The power rules never work for adding.',
     },
     join: {
       label: 'Join like blocks',
@@ -566,10 +566,10 @@ const Algebra = (() => {
       },
       apply: joinBlocks,
       refuse: (items) => theFraction(items)
-        ? 'Nothing matches inside the top or the bottom — and you may never collect across the line.'
+        ? 'Nothing matches inside the top or the bottom. You can never join across the line.'
         : hasKind(items, 'b') || hasKind(items, 'p')
-          ? 'Nothing matches out here yet. What is still inside a bracket cannot be joined — open it first.'
-          : 'No two blocks have the same shape. Same letters <i>and</i> same powers, remember.',
+          ? 'Nothing matches outside the brackets yet. Open the bracket first. Then look again.'
+          : 'No two blocks have the same shape. They need the same letters <i>and</i> the same powers.',
     },
     factor: {
       label: 'Build a bracket',
@@ -580,7 +580,7 @@ const Algebra = (() => {
         return !!factorisation(items);
       },
       apply: factorOut,
-      refuse: () => 'Nothing here shares a factor, and it is not a square minus a square.',
+      refuse: () => 'The terms share no factor. It is not a square minus a square either.',
     },
     flip: {
       label: 'Turn a bracket round',
@@ -599,8 +599,8 @@ const Algebra = (() => {
       },
       apply: cancelBlock,
       refuse: (items) => theFraction(items)
-        ? 'Top and bottom are not both single blocks yet — build the brackets first. ' +
-          'You may never cancel across a + or a −.'
+        ? 'The top and bottom are not single blocks yet. Build the brackets first. ' +
+          'You can never cancel across a + or a −.'
         : 'There is no fraction here to cancel.',
     },
     flipmul: {
@@ -621,8 +621,8 @@ const Algebra = (() => {
                       items.filter((it) => it.k === 'f').every((f) => asTerm(f.den)),
       apply: commonDenominator,
       refuse: (items) => fractionCount(items) >= 2
-        ? 'These bottoms are not plain numbers, so this one needs a different route.'
-        : 'There is only one fraction here — nothing to put over a common bottom.',
+        ? 'These bottoms are not plain numbers. Try a different move.'
+        : 'There is only one fraction here. There is nothing to put over the same bottom.',
     },
   };
 
@@ -648,16 +648,16 @@ const Algebra = (() => {
         // (x + 5)² = x² + 25 — the cross terms forgotten
         const ends = [mulTerm(it.a[0], it.b[0]), mulTerm(it.a[it.a.length - 1], it.b[it.b.length - 1])];
         add(rest(scale(collect(ends), it.m)),
-            'Only the ends were multiplied. Every term in the first bracket has to meet ' +
-            '<b>every</b> term in the second — the middle bit is what goes missing.');
+            'You only multiplied the ends. Every term in the first bracket must meet ' +
+            '<b>every</b> term in the second. The middle terms went missing.');
       } else if (isConst(it.m) && it.m.c === -1) {
         // 7 - (2x - 5) = 7 - 2x - 5 — only the first sign flipped
         const half = it.ts.map((x, i) => (i === 0 ? T(-x.c, x.v) : cloneTerm(x)));
-        add(rest(half), 'Only the first sign was flipped. A minus in front flips <b>every</b> term inside.');
+        add(rest(half), 'You only flipped the first sign. A minus in front flips <b>every</b> term inside.');
       } else {
         // 3(x + 4) = 3x + 4 — the multiplier reached only the first term
         const half = it.ts.map((x, i) => (i === 0 ? mulTerm(x, it.m) : cloneTerm(x)));
-        add(rest(half), 'The number outside only reached the first term. It touches <b>everything</b> inside.');
+        add(rest(half), 'You only multiplied the first term. The number outside multiplies <b>every</b> term inside.');
       }
     }
 
@@ -676,8 +676,8 @@ const Algebra = (() => {
         } else { at.set(s, bumped.length); bumped.push(cloneTerm(x)); }
       }
       add([...bumped.filter((x) => x.c !== 0), ...others],
-          'Adding never changes the power. You are counting shapes: 3 squares and 4 squares ' +
-          'are 7 squares, not 7 of something else.');
+          'Adding never changes the power. You are counting shapes. 3 squares + 4 squares ' +
+          '= 7 squares, not 7 of something else.');
     }
 
     if (key === 'power') {
@@ -689,13 +689,13 @@ const Algebra = (() => {
         const merged = mulAll(it.fs);
         // 3x² · 4x³ = 7x⁵ — the numbers in front added instead of multiplied
         const added = T(it.fs.reduce((c, f) => c + f.c, 0), { ...merged.v });
-        if (added.c !== merged.c) add(rest(added), 'The numbers in front <b>multiply</b>. Only the small numbers add.');
+        if (added.c !== merged.c) add(rest(added), 'The numbers in front <b>multiply</b>. Only the powers add.');
         // x² · x³ = x⁶ — exponents multiplied instead of added
         const v = {};
         for (const k of Object.keys(merged.v)) v[k] = it.fs.reduce((a, f) => a * (f.v[k] || 1), 1);
         const times = T(merged.c, v);
         if (asLine([times]) !== asLine([merged])) add(rest(times),
-          'Multiplying powers <b>adds</b> the small numbers. Multiplying them is the rule for a power of a power.');
+          'When you multiply, the powers <b>add</b>. You only multiply powers for a power of a power.');
       } else if (it.k === 'd') {
         const merged = divTerm(it.a, it.b);
         const v = {};
@@ -705,14 +705,14 @@ const Algebra = (() => {
         }
         const divided = T(merged.c, v);
         if (asLine([divided]) !== asLine([merged])) add(rest(divided),
-          'Dividing <b>subtracts</b> the small numbers. It never divides them.');
+          'When you divide, you <b>take away</b> the powers. You never divide them.');
       } else {
         const merged = powTerm(it.base, it.n);
         const v = {};
         for (const k of Object.keys(it.base.v)) v[k] = it.base.v[k] + it.n;
         const added = T(merged.c, v);
         if (asLine([added]) !== asLine([merged])) add(rest(added),
-          'A power of a power <b>multiplies</b> the small numbers. Adding is the rule for multiplying.');
+          'For a power of a power, <b>multiply</b> the powers. You only add powers when multiplying terms.');
       }
     }
 
@@ -772,19 +772,19 @@ const Algebra = (() => {
   };
 
   function notYet(goal, items) {
-    if (goal === 'factor') return 'Not yet — this one wants a product, so it has to end up inside brackets.';
-    if (hasKind(items, 'x')) return 'Not yet — that is still two fractions, not one.';
-    if (fractionCount(items) > 1) return 'Not yet — put them over the same bottom first.';
+    if (goal === 'factor') return 'Not yet. This one must end as a product, inside brackets.';
+    if (hasKind(items, 'x')) return 'Not yet. That is still two fractions. Make it one.';
+    if (fractionCount(items) > 1) return 'Not yet. Put them over the same bottom first.';
     const f = theFraction(items);
     if (f) {
-      if (factorisation(f.num) || factorisation(f.den)) return 'Not yet — the top or the bottom can still be written as a product.';
-      if (negatedPair(f)) return 'Not yet — those two brackets are opposites. Turn one round.';
-      if (joinableIn(f.num) || joinableIn(f.den)) return 'Not yet — blocks inside the top or bottom still match.';
-      return 'Not yet — there is still a block on both sides to cancel.';
+      if (factorisation(f.num) || factorisation(f.den)) return 'Not yet. You can still write the top or bottom as a product.';
+      if (negatedPair(f)) return 'Not yet. Those two brackets are opposites. Turn one round.';
+      if (joinableIn(f.num) || joinableIn(f.den)) return 'Not yet. Some blocks in the top or bottom still match.';
+      return 'Not yet. A block is still on the top and the bottom. Cancel it.';
     }
-    if (hasKind(items, 'b') || hasKind(items, 'p')) return 'Not yet — there is still a bracket sitting there.';
-    if (hasPower(items)) return 'Not yet — those powers are still waiting for the power rule.';
-    return 'Not yet — two blocks out there are still the same shape.';
+    if (hasKind(items, 'b') || hasKind(items, 'p')) return 'Not yet. There is still a bracket to open.';
+    if (hasPower(items)) return 'Not yet. Some powers still need the power rule.';
+    return 'Not yet. Two blocks are still the same shape. Join them.';
   }
 
   function suggest(goal, items) {

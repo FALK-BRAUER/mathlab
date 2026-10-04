@@ -60,12 +60,12 @@ const appFiles = readdirSync(join(root, 'apps'))
 const registrations = appFiles.map(registration).join('\n\n');
 
 const PATH = `<div class="idea path">
-    <b>The learning path — lines and simultaneous equations</b>
-    <p>Work through these in order: <strong>1 📈 Line Lab</strong> → <strong>2 ✖️ Crossing Point</strong> →
+    <b>Your path: lines and simultaneous equations</b>
+    <p>Go in order: <strong>1 📈 Line Lab</strong> → <strong>2 ✖️ Crossing Point</strong> →
     <strong>3 ⚖️ Two Equations</strong> → <strong>4 🧾 Story Solver</strong>.</p>
-    <p>Inside each one: start with <strong>📖 Worked example</strong>, then the levels ① ② ③ in order, then <strong>Mixed</strong>.
-    Five right in a row and it offers the next level. Wrong answers open <strong>How it works</strong> with that question worked through.</p>
-    <p><strong>🎯 Daily Mix</strong>: ten minutes every day, from everything — this is what makes it stick.</p>
+    <p>In each game, start with <strong>📖 Worked example</strong>. Then do levels ① ② ③, then <strong>Mixed</strong>.</p>
+    <p>Five right in a row? You get offered the next level. Get one wrong and <strong>How it works</strong> shows that question step by step.</p>
+    <p><strong>🎯 Daily Mix</strong>: ten minutes a day, a bit of everything. This is what makes it stick.</p>
   </div>`;
 
 const page = `<title>mathlab</title>
@@ -113,12 +113,11 @@ button.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
     </div>
     ${PATH}
     <div class="idea">
-      <b>The one idea of the first chapter (expressions)</b>
-      <p>A block is a <em>thing</em>. <span class="op">+</span> and <span class="op">−</span> are the
-      joints between blocks — they are not instructions telling you to do something.</p>
-      <p>Blocks of the same shape can join. Different shapes never join, no matter how much
-      the <span class="op">+</span> looks like it wants you to. Almost every mistake in this
-      whole topic is that one thing.</p>
+      <b>The big idea of chapter 1 (expressions)</b>
+      <p>Each term is a block, like <em>3x</em> or <em>5y</em>. The <span class="op">+</span> and <span class="op">−</span>
+      signs sit between blocks. They are not orders to do something.</p>
+      <p>Blocks of the same shape can join: 3x + 2x = 5x. Different shapes never join, even with a
+      <span class="op">+</span> between them. Most mistakes in this topic come from forgetting this.</p>
     </div>
 
     <ul class="grid" id="hub-grid"></ul>
@@ -271,12 +270,11 @@ const rootHub = `<!doctype html>
   ${PATH}
 
   <div class="idea">
-    <b>The one idea of the first chapter (expressions)</b>
-    <p>A block is a <em>thing</em>. <span class="op">+</span> and <span class="op">−</span> are the
-    joints between blocks — they are not instructions telling you to do something.</p>
-    <p>Blocks of the same shape can join. Different shapes never join, no matter how much
-    the <span class="op">+</span> looks like it wants you to. Almost every mistake in this
-    whole topic is that one thing.</p>
+    <b>The big idea of chapter 1 (expressions)</b>
+    <p>Each term is a block, like <em>3x</em> or <em>5y</em>. The <span class="op">+</span> and <span class="op">−</span>
+    signs sit between blocks. They are not orders to do something.</p>
+    <p>Blocks of the same shape can join: 3x + 2x = 5x. Different shapes never join, even with a
+    <span class="op">+</span> between them. Most mistakes in this topic come from forgetting this.</p>
   </div>
 
   <div class="grid">

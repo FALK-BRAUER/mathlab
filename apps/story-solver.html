@@ -16,17 +16,17 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
-<script src="../shared/linear.js?v=ee1df055"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
+<script src="../shared/linear.js?v=0ada118e"></script>
 <script src="../shared/grid.js?v=16d8f245"></script>
-<script src="../shared/stories.js?v=d8bbe8e5"></script>
+<script src="../shared/stories.js?v=2736addb"></script>
 <script>
 MathLab.app('story-solver', {
   emoji: '🧾',
   ownHints: true,
   title: 'Story Solver',
   tagline: 'Story → two equations → answer → does it make sense?',
-  blurb: 'Word problems — tickets, coins, deals, shapes, ages, mixtures — turned into a pair of equations.',
+  blurb: 'Word problems about tickets, coins, deals, shapes, ages and mixtures. Turn each one into two equations.',
 
   build() {
   const { pick, shuffle, mathHTML, note } = MathLab;
@@ -99,7 +99,7 @@ MathLab.app('story-solver', {
       grid.line(L.E({ c: 1, [g.L]: L.neg(ln.r) }, ln.f), { cls: k ? 'b' : 'a', label: ln.name.replace(/^the /, ''), vars: [g.L, 'c'] });
     });
     grid.point(g.nStar, L.num(g.cStar), { cls: 'good', label: g.nStar + ' ' + g.unit });
-    grid.say('Below ' + g.nStar + ' the lower line is the cheaper deal; above it, the other one.');
+    grid.say('The lines cross at ' + g.nStar + ' ' + g.unit + '. There the costs are equal. The lower line is the cheaper deal.');
   }
 
   const checksFor = (s) => s.eqs.map((e, i) => (e.layout || s.layout
@@ -108,20 +108,20 @@ MathLab.app('story-solver', {
 
   /** How to get from the pair to the values — the step most likely to be skipped on paper. */
   function solveTip(s) {
-    if (s.eqs.length === 1) return '<br>One letter, one equation: collect the terms, then divide.';
+    if (s.eqs.length === 1) return '<br>One letter, one equation. Collect the terms, then divide.';
     const [e1, e2] = s.eqs.map((e) => e.eq);
     const [u, v] = s.order;
     const solvedFor = [e1, e2].find((e) => Object.keys(e.co).some((k) => L.eq(L.coef(e, k), 1) && Object.keys(e.co).filter((j) => !L.isZero(L.coef(e, j))).length <= 2));
-    return '<br>' + (s.layout ? 'Both equations say what c is, so set them equal: the costs are the same where the right-hand sides are equal.'
-      : solvedFor ? 'One equation is easy to rearrange for one letter — substitute it into the other.'
-      : 'Make the ' + u + '-terms (or the ' + v + '-terms) the same size, then subtract or add to make that letter disappear.');
+    return '<br>' + (s.layout ? 'Both equations say what c is. So set the two right-hand sides equal.'
+      : solvedFor ? 'Rearrange one equation to get one letter on its own. Then put it into the other equation.'
+      : 'Make the numbers in front of ' + u + ' (or ' + v + ') the same. Then add or take away the equations, so that letter disappears.');
   }
 
   /** The whole story, worked: kind, letters, each equation with its reason, solving, answer. */
   function explainStory(s) {
     const items = [
       '<b>Kind:</b> ' + Stories.KINDS[s.family].label + ' — ' + Stories.KINDS[s.family].blurb.toLowerCase(),
-      '<b>Letters:</b> ' + s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join('; '),
+      '<b>Letters:</b> ' + s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join(', '),
       ...s.eqs.map((e, i) => '<span class="m">' + rightHTML(s, e) + '</span><br>' + e.because),
       '<b>Solve:</b> ' + s.letters.map((l) => mathHTML(l.v) + ' = ' + valFmt(s, l.v)(s.sol[l.v])).join(', ') + solveTip(s) + '<div class="checks">' + checksFor(s) + '</div>',
     ];
@@ -137,20 +137,20 @@ MathLab.app('story-solver', {
     return {
       noScore: true,
       noHint: true,
-      prompt: '📖 Watch one being solved — tap for each step.',
+      prompt: '📖 Watch one being solved. Tap for each step.',
       question: '',
       mount(stage, submit) {
         stage.innerHTML = '<p class="story">' + s.text + '</p>' + figure(s.figure);
         const steps = [
           { html: Stories.KINDS[s.family].label, because: 'What kind is it? ' + Stories.KINDS[s.family].blurb },
-          { html: s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join('<br>'), because: 'Say exactly what each letter stands for — a number of things, not the things.' },
+          { html: s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join('<br>'), because: 'Say exactly what each letter stands for. It is a number, not the things themselves.' },
           ...s.eqs.map((e) => ({ html: rightHTML(s, e), because: e.because })),
           { html: s.letters.map((l) => mathHTML(l.v) + ' = ' + valFmt(s, l.v)(s.sol[l.v])).join(', '), because: solveTip(s).replace('<br>', '') + '<div class="checks">' + checksFor(s) + '</div>' },
         ];
         if (s.derived) steps.push({ html: s.derived.map((d) => d.label + ': ' + qNice(d.value(s.sol))).join(', '), because: 'The question asked for every one of them.' });
         if (s.final && s.final.value) steps.push({ html: qNice(s.final.value) + ' ' + s.final.unit, because: (s.final.because || s.final.prompt) });
-        if (s.final && s.final.options) steps.push({ html: s.final.options.find((o) => o.ok).label, because: 'Answer the question asked: it wants a decision.' });
-        steps.push({ html: s.sentence, because: 'Does it make sense? Whole numbers of things, nothing negative, and it fits the story.' });
+        if (s.final && s.final.options) steps.push({ html: s.final.options.find((o) => o.ok).label, because: 'Answer the question that was asked. It wants a choice.' });
+        steps.push({ html: s.sentence, because: 'Does it make sense? Things come in whole numbers. Nothing is negative. It fits the story.' });
         MathLab.worked(stage, { steps, tryLevel: 1 });
         submit(true);
       },
@@ -280,7 +280,7 @@ MathLab.app('story-solver', {
               }
               if (tries >= 3) {
                 s.eqs.forEach((e, k) => write(k ? '②' : '①', rightHTML(s, e)));
-                return { ok: false, lock: true, why: 'Here they are — compare them with yours. ' + s.eqs.map((e) => e.because).join(' '), wrong, next };
+                return { ok: false, lock: true, why: 'Here they are. Compare them with yours. ' + s.eqs.map((e) => e.because).join(' '), wrong, next };
               }
               return { ok: false, why, wrong };
             },
@@ -293,7 +293,7 @@ MathLab.app('story-solver', {
 
         /* --- solve: values for the letters, with sense checks built into the box --- */
         function solveStep() {
-          promptEl.innerHTML = (s.solvePrompt || 'Now solve the pair.') + ' <span class="kind-blurb">Use substitution or elimination on paper, then put your answers in.</span>';
+          promptEl.innerHTML = (s.solvePrompt || 'Now solve the pair.') + ' <span class="kind-blurb">Solve on paper, by substitution or elimination. Then type your answers.</span>';
           const letters = s.letters.map((l) => l.v);
           let tries = 0;
           cur = MathLab.fields(area, {
@@ -302,7 +302,7 @@ MathLab.app('story-solver', {
               const empty = letters.filter((k) => !v[k]);
               if (empty.length) {
                 note('unfinished', { what: 'one value' });
-                return { ok: false, why: 'The question needs ' + (letters.length > 1 ? 'every' : 'the') + ' value — ' + empty.join(' and ') + ' too.', wrong: empty };
+                return { ok: false, why: 'The question needs ' + (letters.length > 1 ? 'every' : 'the') + ' value. Fill in ' + empty.join(' and ') + ' too.', wrong: empty };
               }
               const vals = {};
               for (const k of letters) { vals[k] = L.parseNumber(v[k]); if (!vals[k]) return { ok: false, why: 'Write a number for ' + k + '.', wrong: [k] }; }
@@ -316,7 +316,7 @@ MathLab.app('story-solver', {
                 note('trap', { trap: 'nonsense-answer' });
                 const k = silly[0];
                 const what = (s.letters.find((l) => l.v === k) || {}).means || k;
-                return { ok: false, why: k + ' = ' + qNice(vals[k]) + ' can\'t be right: ' + what + ' can\'t be ' + qNice(vals[k]) + '. Check your equations against the story.', wrong: silly };
+                return { ok: false, why: k + ' = ' + qNice(vals[k]) + ' can\'t be right. It would make ' + what + ' equal to ' + qNice(vals[k]) + '. Check your equations against the story.', wrong: silly };
               }
 
               const okAll = letters.every((k) => L.eq(vals[k], s.sol[k]));
@@ -332,7 +332,7 @@ MathLab.app('story-solver', {
                 return { ok: false, lock: true, next, wrong: letters,
                   why: 'The solution is ' + letters.map((k) => k + ' = ' + qNice(s.sol[k])).join(', ') + '. It works:<div class="checks">' + checksFor(s) + '</div>' + solveTip(s) };
               }
-              return { ok: false, why: 'Put them back in: <div class="checks">' + checks + '</div>', wrong: letters.filter((k) => !L.eq(vals[k], s.sol[k])) };
+              return { ok: false, why: 'Put your values back into the equations: <div class="checks">' + checks + '</div>', wrong: letters.filter((k) => !L.eq(vals[k], s.sol[k])) };
             },
           });
           cur.fill = () => letters.forEach((k) => { cur.inputs[k].value = L.qText(s.sol[k]); });
@@ -347,12 +347,12 @@ MathLab.app('story-solver', {
             fields: s.derived.map((d, i) => ({ key: keys[i], label: d.label, long: true })),
             onSubmit(v) {
               const empty = keys.filter((k) => !v[k]);
-              if (empty.length) { note('unfinished', { what: 'stopped at the letter' }); return { ok: false, why: 'You found ' + s.letters[0].v + ' — now answer what was asked: every one.', wrong: empty }; }
+              if (empty.length) { note('unfinished', { what: 'stopped at the letter' }); return { ok: false, why: 'You found ' + s.letters[0].v + '. Now answer what was asked: every one.', wrong: empty }; }
               const want = s.derived.map((d) => d.value(s.sol));
               const wrong = keys.filter((k, i) => { const g = L.parseNumber(v[k]); return !g || !L.eq(g, want[i]); });
               if (!wrong.length) {
                 write('', s.derived.map((d, i) => d.label + ': ' + qNice(want[i])).join(', '));
-                return { ok: true, right: keys, next, why: 'Each one from its expression: ' + s.derived.map((d, i) => d.label + ' = ' + d.html + ' = ' + qNice(want[i])).join(', ') + '.' };
+                return { ok: true, right: keys, next, why: 'Each one comes from its expression: ' + s.derived.map((d, i) => d.label + ' = ' + d.html + ' = ' + qNice(want[i])).join(', ') + '.' };
               }
               misses++; tries++;
               if (tries >= 3) {
@@ -381,10 +381,10 @@ MathLab.app('story-solver', {
           cur = MathLab.fields(area, {
             fields: [{ key: 'v', label: 'answer', long: true, unit: f.unit }],
             onSubmit(v) {
-              if (!v.v) { note('unfinished', { what: 'hence part' }); return { ok: false, why: 'Finish the question — this part counts too.', wrong: ['v'] }; }
+              if (!v.v) { note('unfinished', { what: 'hence part' }); return { ok: false, why: 'Finish the question. This part counts too.', wrong: ['v'] }; }
               const g = L.parseNumber(v.v);
               if (!g) return { ok: false, why: 'Write a number.', wrong: ['v'] };
-              if (L.eq(g, f.value)) { write('', qNice(f.value) + ' ' + f.unit); return { ok: true, right: ['v'], next, why: f.because || 'Yes — from the values you found.' }; }
+              if (L.eq(g, f.value)) { write('', qNice(f.value) + ' ' + f.unit); return { ok: true, right: ['v'], next, why: f.because || 'Yes. You used the values you found.' }; }
               misses++; tries++;
               const t = (f.traps || []).find((tr) => L.eq(tr.value, g));
               if (t) note('trap', { trap: 'hence-' + s.family });
@@ -432,7 +432,7 @@ MathLab.app('story-solver', {
     const stories = fams.map((f) => Stories.make(f));
     const target = stories[0];
     return {
-      prompt: 'Which story do these equations describe?',
+      prompt: 'Which story do these equations fit?',
       question: '',
       solution: 'the ' + Stories.KINDS[target.family].label.toLowerCase() + ' story',
       mount(stage, submit) {
@@ -446,7 +446,7 @@ MathLab.app('story-solver', {
             html: '<span style="font-size:.9rem;font-weight:600">' + st.text + '</span>',
             ok: st === target,
             trap: 'match-story',
-            why: st === target ? '' : 'Check the numbers: do they appear in this story, doing the same job?',
+            why: st === target ? '' : 'Check the numbers. Are they in this story, doing the same job?',
           }))),
           onDone(misses) { submit(misses === 0, undefined, target.sentence); },
         });

@@ -11,20 +11,20 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>⚖️ Two Equations</h1>
-    <p class="tagline">Substitute or eliminate — and finish with x AND y.</p>
+    <p class="tagline">Substitute or eliminate. Then find both x and y.</p>
   </div>
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
-<script src="../shared/linear.js?v=ee1df055"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
+<script src="../shared/linear.js?v=0ada118e"></script>
 <script>
 MathLab.app('two-equations', {
   emoji: '⚖️',
   ownHints: true,
   title: 'Two Equations',
-  tagline: 'Substitute or eliminate — and finish with x AND y.',
-  blurb: 'Solve a pair step by step. Every step offers the real mistakes; the round ends only with both answers checked.',
+  tagline: 'Substitute or eliminate. Then find both x and y.',
+  blurb: 'Solve two equations step by step. Each step shows real mistakes to spot. You finish when both answers check out.',
 
   build() {
   const { pick, shuffle, mathHTML, note } = MathLab;
@@ -52,9 +52,9 @@ MathLab.app('two-equations', {
       '<li><span class="m">' + st.writtenHTML + '</span><br>' + (st.because || '') + '</li>');
     const pickStep = steps.find((st) => st.kind === 'pick');
     const intro = script.method === 'substitution'
-      ? 'Substitution: one equation already says what one letter equals, so put that into the other.'
-      : 'Elimination: make one letter\'s terms the same size, then ' + (pickStep ? 'add or subtract the equations so that letter disappears.' : 'combine the equations so it disappears.');
-    return intro + '<ol>' + lines.join('') + '<li>Check in both: <div class="checks">' +
+      ? 'Substitution (swapping in): one equation already says what one letter equals. Put that into the other equation.'
+      : 'Elimination (making a letter disappear): first make one letter\'s terms the same size. Then ' + (pickStep ? 'add or subtract the equations. That letter disappears.' : 'combine the equations. That letter disappears.');
+    return intro + '<ol>' + lines.join('') + '<li>Check your answer in both equations: <div class="checks">' +
       L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div></li></ol>';
   }
 
@@ -66,7 +66,7 @@ MathLab.app('two-equations', {
     return {
       noScore: true,
       noHint: true,
-      prompt: '📖 Watch one being solved — tap for each step.',
+      prompt: '📖 Watch one being solved. Tap for each step.',
       question: '',
       mount(stage, submit) {
         stage.innerHTML = '<div class="eqs"><div class="eqn a"><span class="tag">①</span>' + pr.show1 + '</div><div class="eqn b"><span class="tag">②</span>' + pr.show2 + '</div></div>';
@@ -77,7 +77,7 @@ MathLab.app('two-equations', {
           }
           return { html: (st.tag ? '<span class="kind-blurb">' + st.tag + '</span>' : '') + st.writtenHTML, because: st.because };
         });
-        items.push({ html: 'x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y), because: 'Both values — that is the answer. Check it:<div class="checks">' +
+        items.push({ html: 'x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y), because: 'Both values together are the answer. Check them:<div class="checks">' +
           L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div>' });
         MathLab.worked(stage, {
           title: script.method === 'substitution' ? 'Substitution' : 'Elimination',
@@ -169,7 +169,7 @@ MathLab.app('two-equations', {
                   ok = L.eq(n, st.answer);
                 } else {
                   const e = L.parseEquation(v.a);
-                  if (!e) return { ok: false, why: 'I can\'t read that as an equation. It needs an = sign, e.g. 3x − 2y = 10.', wrong: ['a'] };
+                  if (!e) return { ok: false, why: 'I can\'t read that as an equation. It needs an = sign, like 3x − 2y = 10.', wrong: ['a'] };
                   ok = L.equivalent(e, st.answer);
                   if (ok && st.mustMatch) {
                     const match = (f) => Object.entries(st.mustMatch).every(([k, q]) => L.eq(L.mul(L.coef(e, k), f), q));
@@ -181,7 +181,7 @@ MathLab.app('two-equations', {
                 note('trap', { trap: 'typed-' + st.kind });
                 const hintTrap = st.options.find((o) => !o.ok && o.why);
                 if (tries >= 2) return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML + '<br>' + (st.because || ''), wrong: ['a'], next: done };
-                return { ok: false, why: 'Not that. ' + (hintTrap ? 'Watch out: ' + hintTrap.why : 'Check each term.'), wrong: ['a'] };
+                return { ok: false, why: 'Not quite. ' + (hintTrap ? 'Watch out: ' + hintTrap.why : 'Check each term.'), wrong: ['a'] };
               },
             });
             return;
@@ -208,7 +208,7 @@ MathLab.app('two-equations', {
 
         function finish() {
           stuckBtn.hidden = true;
-          promptEl.innerHTML = 'Last step — write the answer to the question: <b>both</b> values.';
+          promptEl.innerHTML = 'Last step. Write the answer: <b>both</b> values.';
           let wrongTries = 0;
           MathLab.fields(area, {
             fields: [{ key: 'x', label: mathHTML('x') + ' =' }, { key: 'y', label: mathHTML('y') + ' =' }],
@@ -217,7 +217,7 @@ MathLab.app('two-equations', {
               const empty = ['x', 'y'].filter((k) => !v[k]);
               if (empty.length) {
                 note('unfinished', { what: 'stopped at one value' });
-                return { ok: false, why: 'You found ' + (empty.length === 1 ? (empty[0] === 'x' ? 'y' : 'x') : 'nothing yet') + ' — the question asks for x AND y.', wrong: empty };
+                return { ok: false, why: 'You found ' + (empty.length === 1 ? (empty[0] === 'x' ? 'y' : 'x') : 'nothing yet') + '. The question asks for both x and y.', wrong: empty };
               }
               const gx = L.parseNumber(v.x), gy = L.parseNumber(v.y);
               if (!gx || !gy) return { ok: false, why: 'Write numbers, like −3 or 5/2.', wrong: [!gx && 'x', !gy && 'y'].filter(Boolean) };
@@ -232,7 +232,7 @@ MathLab.app('two-equations', {
                   setTimeout(() => submit(false, 0, 'The values are in your working: x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y) + '. Copy both into the answer.'), 200);
                   return { ok: false, lock: true, why: '', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
                 }
-                return { ok: false, why: 'Check it in both: <div class="checks">' + L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
+                return { ok: false, why: 'Not yet. Put your values into both equations: <div class="checks">' + L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
               }
               settle(pair);
               return { ok: true, right: ['x', 'y'] };
@@ -243,7 +243,7 @@ MathLab.app('two-equations', {
         function settle(pair) {
           const box = document.createElement('div');
           box.className = 'bridge';
-          box.innerHTML = '<b>Check it — both equations</b><div class="checks">' +
+          box.innerHTML = '<b>Check it in both equations</b><div class="checks">' +
             L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>' +
             '<p class="process">' + (script.method === 'substitution' ? 'Substitution' : 'Elimination') + ' · ' + steps.length + ' steps' +
             (misses === 0 && stuckCount === 0 ? ' · every step yours ⭐️' : ' · finished it') + '</p>';
@@ -255,12 +255,12 @@ MathLab.app('two-equations', {
         }
 
         if (offerChoice) {
-          promptEl.innerHTML = '① already says what ' + pr.p.solved + ' equals. Which way in?';
+          promptEl.innerHTML = '① already says what ' + pr.p.solved + ' equals. Which method do you want?';
           let chosen = 'sub';
           cur = MathLab.choice(area, {
             options: [
-              { html: 'Substitute ① into ②', ok: true, why: 'Quickest here: ① hands you ' + pr.p.solved + ' ready-made.' },
-              { html: 'Line them up and eliminate', ok: true, why: 'Works too — ① just gets lined up as ax + by = c first.' },
+              { html: 'Substitute ① into ②', ok: true, why: 'Quickest here. ① already tells you what ' + pr.p.solved + ' is.' },
+              { html: 'Line them up and eliminate', ok: true, why: 'That works too. First rewrite ① as ax + by = c.' },
             ],
             onDone: () => begin(chosen),
           });

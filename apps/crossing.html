@@ -16,15 +16,15 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
-<script src="../shared/linear.js?v=ee1df055"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
+<script src="../shared/linear.js?v=0ada118e"></script>
 <script src="../shared/grid.js?v=16d8f245"></script>
 <script>
 MathLab.app('crossing', {
   emoji: '✖️',
   title: 'Crossing Point',
   tagline: 'Two lines, one point that works for both.',
-  blurb: 'Solve a pair by graphing. Intercept or intersection? One, none or infinitely many?',
+  blurb: 'Solve a pair of equations by drawing both lines. Find where they cross. Is there one answer, none, or lots?',
 
   build() {
   const { rnd, pick, shuffle, note } = MathLab;
@@ -78,11 +78,11 @@ MathLab.app('crossing', {
     if (eq(P.x, sol.x) && eq(P.y, sol.y)) return null;
     const ints = [...intercepts(e1, 'A'), ...intercepts(e2, 'B')];
     const hit = ints.find((i) => i.x === p.x && i.y === p.y);
-    if (hit) return { trap: 'intercept-vs-intersection', why: 'That is ' + hit.what + ' — an intercept. The answer is where the two LINES meet each other.' };
+    if (hit) return { trap: 'intercept-vs-intersection', why: 'That is ' + hit.what + '. The answer is where the two LINES meet each other.' };
     const onA = L.satisfies(e1, P), onB = L.satisfies(e2, P);
-    if (onA || onB) return { trap: 'one-line-only', why: pt(p) + ' is on line ' + (onA ? 'A' : 'B') + ' but not on line ' + (onA ? 'B' : 'A') + '. It has to work for both.' };
-    if (p.x === L.num(sol.y) && p.y === L.num(sol.x)) return { trap: 'coordinates-swapped', why: 'x first, then y: across, then up.' };
-    return { trap: 'crossing-other', why: 'Follow both lines to where they meet.' };
+    if (onA || onB) return { trap: 'one-line-only', why: pt(p) + ' is on line ' + (onA ? 'A' : 'B') + ' but not on line ' + (onA ? 'B' : 'A') + '. It has to be on both lines.' };
+    if (p.x === L.num(sol.y) && p.y === L.num(sol.x)) return { trap: 'coordinates-swapped', why: 'You swapped x and y. Write x first (across), then y (up).' };
+    return { trap: 'crossing-other', why: 'Follow both lines with your finger. Tap where they meet.' };
   }
 
   const ptQ = (x, y) => '(' + qText(x) + ', ' + qText(y) + ')';
@@ -99,10 +99,10 @@ MathLab.app('crossing', {
     return 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + (eq(a, 1) ? '' : ', so x = ' + L.qHTML(v)) + ' → ' + ptQ(v, 0);
   }
 
-  const EXPLAIN_CROSS = '<ol><li>Each line is every point that makes its equation true.</li>' +
-    '<li>The crossing is the one point on BOTH lines — so it makes BOTH equations true. That pair is the solution.</li>' +
-    '<li>An intercept is different: where ONE line meets an axis. It always has a 0 in it.</li>' +
-    '<li>Always check the crossing in both equations.</li></ol>';
+  const EXPLAIN_CROSS = '<ol><li>A line is made of every point that makes its equation true.</li>' +
+    '<li>The crossing point is on BOTH lines. So it makes BOTH equations true. That x and y are the solution.</li>' +
+    '<li>An intercept is different. It is where ONE line meets an axis. It always has a 0 in it.</li>' +
+    '<li>Always check the crossing point in both equations.</li></ol>';
 
   /* ---------------- ① step by step: build both lines, then cross ---------------- */
 
@@ -117,44 +117,44 @@ MathLab.app('crossing', {
     const phases = [
       { line: 0, ask: 'Line A: ' + a + '. Where does it cross the <b>y-axis</b>? Tap that point.',
         ok: (p) => p.x === 0 && eq(Q(p.y), c1),
-        because: 'In y = mx + c the number on its own, ' + qText(c1) + ', is where it crosses the y-axis: ' + ptQ(0, c1) + '.',
-        wrong: (p) => (p.y === 0 && eq(Q(p.x), c1) ? { trap: 'intercept-x-axis', why: 'That is on the x-axis. The y-intercept sits on the y-axis, where x = 0: ' + ptQ(0, c1) + '.' }
-          : p.x === 0 && eq(Q(p.y), L.neg(c1)) ? { trap: 'intercept-sign', why: 'Check the sign: c is ' + qText(c1) + '.' }
-          : { trap: 'intercept-other', why: 'On the y-axis x = 0. Put x = 0 into y = mx + c: y = c = ' + qText(c1) + '.' }) },
-      { line: 0, ask: 'Now use the gradient ' + L.qHTML(m1) + ': from ' + ptQ(0, c1) + ' go ' + m1.d + ' right and ' + (m1.n < 0 ? -m1.n + ' down' : m1.n + ' up') + '. Tap that point.',
+        because: 'In y = mx + c, the number on its own is ' + qText(c1) + '. That is the y-intercept (where it crosses the y-axis): ' + ptQ(0, c1) + '.',
+        wrong: (p) => (p.y === 0 && eq(Q(p.x), c1) ? { trap: 'intercept-x-axis', why: 'That is on the x-axis. The y-intercept sits on the y-axis, where x = 0. It is ' + ptQ(0, c1) + '.' }
+          : p.x === 0 && eq(Q(p.y), L.neg(c1)) ? { trap: 'intercept-sign', why: 'Check the sign. The number on its own is ' + qText(c1) + '.' }
+          : { trap: 'intercept-other', why: 'On the y-axis, x = 0. Put x = 0 into y = mx + c. You get y = c = ' + qText(c1) + '.' }) },
+      { line: 0, ask: 'Now use the gradient (how steep it is), ' + L.qHTML(m1) + '. From ' + ptQ(0, c1) + ' go ' + m1.d + ' right and ' + (m1.n < 0 ? -m1.n + ' down' : m1.n + ' up') + '. Tap that point.',
         ok: (p) => L.satisfies(e1, { x: Q(p.x), y: Q(p.y) }) && !(p.x === 0),
-        because: 'Gradient ' + qText(m1) + ' = ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + ' for every ' + m1.d + ' across, so ' + ptQ(m1.d, L.add(c1, m1.n)) + ' is on the line too.',
-        wrong: (p) => (L.satisfies(e1, { x: Q(p.x), y: Q(-p.y + 2 * L.num(c1)) }) ? { trap: 'gradient-sign', why: 'Wrong direction: ' + (m1.n < 0 ? 'a negative gradient goes DOWN as you go right.' : 'a positive gradient goes UP as you go right.') }
+        because: 'Gradient ' + qText(m1) + ' means ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + ' for every ' + m1.d + ' across. So ' + ptQ(m1.d, L.add(c1, m1.n)) + ' is on the line too.',
+        wrong: (p) => (L.satisfies(e1, { x: Q(p.x), y: Q(-p.y + 2 * L.num(c1)) }) ? { trap: 'gradient-sign', why: 'Wrong direction. ' + (m1.n < 0 ? 'A negative gradient goes DOWN as you go right.' : 'A positive gradient goes UP as you go right.') }
           : { trap: 'gradient-wrong', why: 'Across first (' + m1.d + '), then ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + '. Count the squares from ' + ptQ(0, c1) + '.' }) },
-      { line: 1, ask: 'Line B: ' + b + '. Put <b>x = 0</b> — where does it cross the y-axis? Tap it.',
+      { line: 1, ask: 'Line B: ' + b + '. Put <b>x = 0</b>. Where does it cross the y-axis? Tap it.',
         ok: (p) => p.x === 0 && eq(Q(p.y), L.yIntercept(e2)),
         because: axisWork(B, 'y') + '.',
-        wrong: (p) => (p.y === 0 ? { trap: 'intercepts-swapped', why: 'x = 0 is the y-axis (up and down). ' + axisWork(B, 'y') + '.' }
+        wrong: (p) => (p.y === 0 ? { trap: 'intercepts-swapped', why: 'x = 0 is the y-axis, the one going up and down. ' + axisWork(B, 'y') + '.' }
           : { trap: 'intercept-other', why: axisWork(B, 'y') + '.' }) },
       useXInt
-        ? { line: 1, ask: 'Put <b>y = 0</b> in line B — where does it cross the x-axis? Tap it.',
+        ? { line: 1, ask: 'Put <b>y = 0</b> in line B. Where does it cross the x-axis? Tap it.',
           ok: (p) => p.y === 0 && eq(Q(p.x), xiB),
-          because: axisWork(B, 'x') + '. Two points — line B is drawn.',
-          wrong: (p) => (p.x === 0 ? { trap: 'intercepts-swapped', why: 'y = 0 is the x-axis (left to right). ' + axisWork(B, 'x') + '.' }
-            : L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) ? { trap: 'intercept-other', why: 'That point IS on line B — but the x-intercept has y = 0. ' + axisWork(B, 'x') + '.' }
+          because: axisWork(B, 'x') + '. That is two points, so line B is drawn.',
+          wrong: (p) => (p.x === 0 ? { trap: 'intercepts-swapped', why: 'y = 0 is the x-axis, the one going left to right. ' + axisWork(B, 'x') + '.' }
+            : L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) ? { trap: 'intercept-other', why: 'That point IS on line B. But the x-intercept has y = 0. ' + axisWork(B, 'x') + '.' }
             : { trap: 'intercept-sign', why: axisWork(B, 'x') + '.' }) }
-        : { line: 1, ask: 'Find one more point on line B: pick an x, work out y from ' + b + ', and tap it.',
+        : { line: 1, ask: 'Find one more point on line B. Pick an x. Work out y from ' + b + '. Then tap it.',
           ok: (p) => L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) && p.x !== 0,
-          because: 'It makes ' + b + ' true, so it is on line B. Two points — line B is drawn.',
-          wrong: () => ({ trap: 'line-other', why: 'Put your x into ' + b + ' and solve for y. The gradient of B is ' + qText(L.gradient(e2)) + ', which helps.' }) },
+          because: 'It makes ' + b + ' true, so it is on line B. That is two points, so line B is drawn.',
+          wrong: () => ({ trap: 'line-other', why: 'Put your x into ' + b + ' and solve for y. Tip: the gradient of B is ' + qText(L.gradient(e2)) + '.' }) },
       { line: 2, ask: 'Both lines are drawn. Tap where they <b>cross</b>.',
         ok: (p) => eq(Q(p.x), sol.x) && eq(Q(p.y), sol.y),
-        because: ptQ(sol.x, sol.y) + ' is on both lines, so it makes both equations true:',
+        because: ptQ(sol.x, sol.y) + ' is on both lines. So it makes both equations true:',
         wrong: (p) => judgeTap(p, e1, e2, sol) },
     ];
 
     const round = {
-      prompt: 'Build both lines step by step, then find where they cross.',
+      prompt: 'Draw both lines step by step. Then find the crossing point (where they meet).',
       question: '',
       solution: ptQ(sol.x, sol.y),
-      explain: () => '<ol><li>Line A, ' + a + ': start at the y-intercept ' + ptQ(0, c1) + ', then use the gradient ' + L.qHTML(m1) + ' for a second point.</li>' +
-        '<li>Line B, ' + b + ': ' + axisWork(B, 'y') + (useXInt ? '; ' + axisWork(B, 'x') : '') + '.</li>' +
-        '<li>Where they cross: ' + ptQ(sol.x, sol.y) + '.' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }) + '</li></ol>',
+      explain: () => '<ol><li>Line A, ' + a + '. Start at the y-intercept (where it crosses the y-axis), ' + ptQ(0, c1) + '. Then use the gradient (how steep it is), ' + L.qHTML(m1) + ', for a second point.</li>' +
+        '<li>Line B, ' + b + '. ' + axisWork(B, 'y') + (useXInt ? '. ' + axisWork(B, 'x') : '') + '.</li>' +
+        '<li>The lines cross at ' + ptQ(sol.x, sol.y) + '.' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }) + '</li></ol>',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
         // the instruction sits ABOVE the grid: below it, on a phone, it is off-screen
@@ -193,8 +193,8 @@ MathLab.app('crossing', {
             // finishing every step is the win; the mistakes on the way cost points, not the round
             round.firstTry = misses === 0;
             submit(true, Math.max(6, 20 - 3 * misses), misses === 0
-              ? 'All five steps right first time — built from the equations, not guessed.'
-              : 'Finished. ' + missedSteps.size + ' of ' + phases.length + ' steps needed another try — open How it works to see each one again.');
+              ? 'All five steps right first time. You built both lines from the equations.'
+              : 'Finished. ' + missedSteps.size + ' of ' + phases.length + ' steps needed another try. Open How it works to see each step again.');
           });
         }
 
@@ -246,7 +246,7 @@ MathLab.app('crossing', {
       question: '',
       solution: pt(sol),
       explain: EXPLAIN_CROSS,
-      hint: 'Ignore where the lines hit the axes. Look for the one spot where blue and orange touch.',
+      hint: 'Ignore where the lines hit the axes. Find the one spot where blue and orange touch.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
         const grid = Grid.create(stage, {});
@@ -263,7 +263,7 @@ MathLab.app('crossing', {
           const bad = judgeTap(p, e1, e2, sol);
           grid.point(L.num(sol.x), L.num(sol.y), { cls: 'good', label: pt(sol) });
           addHTML(stage, checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }));
-          if (!bad) { submit(true, undefined, 'It works in both — that is what a solution is.'); return; }
+          if (!bad) { submit(true, undefined, 'Yes! It works in both equations. That is what a solution is.'); return; }
           note('trap', { trap: bad.trap });
           submit(false, 0, bad.why);
         });
@@ -280,10 +280,10 @@ MathLab.app('crossing', {
       prompt: 'Draw both lines, then find where they cross.',
       question: '',
       solution: pt(sol),
-      explain: () => '<ol><li>Line A: ' + a + ' — ' + axisWork(e1, 'y') + ', then use the gradient ' + L.qHTML(L.gradient(e1)) + '.</li>' +
-        '<li>Line B: ' + b + ' — ' + axisWork(e2, 'y') + ', then the gradient ' + L.qHTML(L.gradient(e2)) + '.</li>' +
-        '<li>They cross at ' + pt(sol) + ' — check it in both.</li></ol>',
-      hint: 'For each line find two points — the intercepts work well — and tap them.',
+      explain: () => '<ol><li>Line A: ' + a + '. ' + axisWork(e1, 'y') + '. Then use the gradient (how steep it is), ' + L.qHTML(L.gradient(e1)) + '.</li>' +
+        '<li>Line B: ' + b + '. ' + axisWork(e2, 'y') + '. Then use the gradient, ' + L.qHTML(L.gradient(e2)) + '.</li>' +
+        '<li>They cross at ' + pt(sol) + '. Check it in both equations.</li></ol>',
+      hint: 'Find two points on each line and tap them. The points where it crosses the axes work well.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
         const status = addHTML(stage, '<p class="step-prompt"></p>').firstChild;
@@ -309,7 +309,7 @@ MathLab.app('crossing', {
         btn.addEventListener('click', () => {
           const pts = pk.points();
           if (phase < 2) {
-            if (pts.length < 2) { why.className = 'why-line bad'; why.innerHTML = 'Two points make a line.'; note('unfinished', { what: 'one point' }); return; }
+            if (pts.length < 2) { why.className = 'why-line bad'; why.innerHTML = 'You need two points for a line. Tap one more.'; note('unfinished', { what: 'one point' }); return; }
             const [p, q] = pts;
             const user = L.E({ x: q.y - p.y, y: p.x - q.x }, (q.y - p.y) * p.x + (p.x - q.x) * p.y);
             pk.stop(); pk.clear();
@@ -320,8 +320,8 @@ MathLab.app('crossing', {
               misses++;
               note('trap', { trap: 'draw-line' });
               why.className = 'why-line bad';
-              why.innerHTML = 'Not quite — here is line ' + (phase ? 'B' : 'A') + '. ' +
-                (L.gradient(e) ? 'It crosses the y-axis at ' + qText(L.yIntercept(e)) + ' with gradient ' + qText(L.gradient(e)) + '.' : '');
+              why.innerHTML = 'Not quite. Here is line ' + (phase ? 'B' : 'A') + '. ' +
+                (L.gradient(e) ? 'It crosses the y-axis at ' + qText(L.yIntercept(e)) + '. Its gradient is ' + qText(L.gradient(e)) + '.' : '');
             } else {
               why.className = 'why-line good';
               why.innerHTML = 'Line ' + (phase ? 'B' : 'A') + ' ✓';
@@ -339,7 +339,7 @@ MathLab.app('crossing', {
           addHTML(stage, checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }));
           if (bad) { misses++; note('trap', { trap: bad.trap }); }
           if (bad) submit(false, 0, bad.why);
-          else submit(true, Math.max(6, 20 - 5 * misses), misses ? 'Crossing found — and now you have seen both lines.' : 'Both lines and the crossing — all yours.');
+          else submit(true, Math.max(6, 20 - 5 * misses), misses ? 'You found the crossing point. Now you have seen both lines too.' : 'Both lines and the crossing point, all right first time.');
         });
         start();
       },
@@ -364,17 +364,17 @@ MathLab.app('crossing', {
       ok: isAlso.includes(lab),
       trap: 'intercept-vs-intersection',
       why: isAlso.includes(lab) ? ''
-        : lab === labels[0] ? 'Where the lines cross, the point is on BOTH lines. This one is on an axis — one of its numbers is 0.'
-        : 'Look again: which axis is it on (or none?), and whose line is it on?',
+        : lab === labels[0] ? 'A crossing point is on BOTH lines. This one is on an axis. One of its numbers is 0.'
+        : 'Look again. Which axis is it on, if any? Which line is it on?',
     }));
     return {
       prompt: 'What is the orange point?',
       question: '',
-      explain: '<ol><li><b>Intercept</b>: where ONE line meets an axis. On the x-axis y = 0; on the y-axis x = 0 — so an intercept always has a 0 in it.</li>' +
-        '<li><b>Intersection</b> (crossing): where the TWO lines meet. It is on both lines, so it makes both equations true.</li>' +
-        '<li>Test a point: is one of its numbers 0? Is it on line A, line B, or both?</li></ol>',
+      explain: '<ol><li><b>Intercept</b>: where ONE line meets an axis. On the x-axis, y = 0. On the y-axis, x = 0. So an intercept always has a 0 in it.</li>' +
+        '<li><b>Crossing point</b> (also called the intersection): where the TWO lines meet. It is on both lines. So it makes both equations true.</li>' +
+        '<li>To test a point, ask: is one of its numbers 0? Is it on line A, line B, or both?</li></ol>',
       solution: pt(target) + ' is ' + isAlso.join(' and '),
-      hint: 'On an axis, one of the numbers is 0. Where the lines cross, the point is on both of them.',
+      hint: 'On an axis, one of the numbers is 0. A crossing point is on both lines.',
       mount(stage, submit) {
         eqsBlock(stage, shown(e1), shown(e2));
         const grid = Grid.create(stage, {});
@@ -401,15 +401,15 @@ MathLab.app('crossing', {
       const m1 = L.gradient(e1), m2 = L.gradient(e2);
       const perp = m1 && m2 && eq(L.mul(m1, m2), -1);
       return 'Different gradients' + (m1 && m2 ? ' (' + qText(m1) + ' and ' + qText(m2) + ')' : '') +
-        ', so they cross exactly once, at ' + pt(r.sol) + '.' + (perp ? ' (They meet at a right angle — still just one crossing.)' : '');
+        '. So they cross exactly once, at ' + pt(r.sol) + '.' + (perp ? ' They meet at a right angle. That is still just one crossing.' : '');
     }
     // scale ② so the x-terms match, then subtract — exactly what elimination would do
     const ax = L.coef(e1, 'x'), bx = L.coef(e2, 'x');
     const f = !isZero(bx) ? L.div(ax, bx) : L.div(L.coef(e1, 'y'), L.coef(e2, 'y'));
     const d = L.subEq(e1, L.scale(e2, f));
     return r.kind === 'none'
-      ? 'Same gradient, different intercepts: parallel. The algebra agrees — make the x-terms match and subtract, and you get <b>0 = ' + qText(d.k) + '</b>, which is never true. No pair works.'
-      : 'Rearrange both and they are the SAME line. Subtracting gives <b>0 = 0</b>, always true: every point on the line works.';
+      ? 'Same gradient, different y-intercepts. So the lines are parallel and never meet. The algebra says <b>0 = ' + qText(d.k) + '</b>. That is never true. No answer works.'
+      : 'Rearrange both and they are the SAME line. The algebra says <b>0 = 0</b>. That is always true. Every point on the line works.';
   }
 
   function countRound() {
@@ -428,9 +428,9 @@ MathLab.app('crossing', {
     } else ({ e1, e2 } = L.graphPair({}), kind = 'one');
     const answer = { one: 'Exactly one', none: 'None', infinite: 'Infinitely many' };
     const why = {
-      one: { none: 'They are not parallel — different gradients always cross once.', infinite: 'Different gradients: they are not the same line, so they only share one point.' },
-      none: { one: 'Rearrange both: same gradient, different intercept. Parallel lines never meet.', infinite: 'Same gradient, but they cross the y-axis at different places — two different parallel lines.' },
-      infinite: { one: 'Rearrange both: they turn into the same line. Every point on it works.', none: 'Same gradient AND same intercept — that is one line written twice, not two parallel ones.' },
+      one: { none: 'They are not parallel. Lines with different gradients always cross once.', infinite: 'The gradients are different, so it is not the same line. They share just one point.' },
+      none: { one: 'Rearrange both. Same gradient, different y-intercept. Parallel lines never meet.', infinite: 'Same gradient, but they cross the y-axis at different places. So they are two different parallel lines.' },
+      infinite: { one: 'Rearrange both. They turn into the same line. Every point on it works.', none: 'Same gradient AND same y-intercept. That is one line written twice, not two parallel lines.' },
     };
     const traps = { 'one>none': 'parallel-one', 'infinite>none': 'coincident-none', 'none>infinite': 'parallel-coincident' };
     const a = shown(e1), b = shown(e2);
@@ -438,10 +438,10 @@ MathLab.app('crossing', {
       prompt: 'How many solutions does this pair have?',
       question: '',
       solution: answer[kind],
-      explain: '<ol><li>Rearrange both into y = mx + c.</li><li>Different gradients → the lines cross once → <b>exactly one</b> solution (even if they cross at a right angle).</li>' +
-        '<li>Same gradient, different intercept → parallel, never meet → <b>no</b> solution. Algebra gives something false like 0 = 7.</li>' +
-        '<li>Same gradient AND same intercept → the same line twice → <b>infinitely many</b>. Algebra gives 0 = 0.</li></ol>',
-      hint: 'Get both into y = mx + c. Compare the gradients first, then the intercepts.',
+      explain: '<ol><li>Rearrange both into y = mx + c. The gradient (m) is how steep it is. The y-intercept (c) is where it crosses the y-axis.</li><li>Different gradients → the lines cross once → <b>exactly one</b> solution. A right angle still counts as one.</li>' +
+        '<li>Same gradient, different y-intercept → parallel, never meet → <b>no</b> solution. The algebra gives something false, like 0 = 7.</li>' +
+        '<li>Same gradient AND same y-intercept → the same line twice → <b>infinitely many</b>. The algebra gives 0 = 0.</li></ol>',
+      hint: 'Get both into y = mx + c. Compare the gradients first. Then compare the y-intercepts.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
         const opts = ['one', 'none', 'infinite'].map((k) => ({
@@ -479,8 +479,8 @@ MathLab.app('crossing', {
     return {
       prompt: 'Is ' + pt(cand) + ' the solution of this pair?',
       question: '',
-      solution: works ? 'Yes' : 'No — the solution is ' + pt(sol),
-      explain: 'A solution of a pair must make BOTH equations true. Put x and y into each one: work out the left side, compare it with the right side. Equal both times → it is the solution. Equal in only one → it is just a point on that one line.',
+      solution: works ? 'Yes' : 'No. The solution is ' + pt(sol),
+      explain: 'A solution must make BOTH equations true. Put x and y into each one. Work out the left side. Compare it with the right side. Equal both times → it is the solution. Equal in only one → it is just a point on that one line.',
       hint: 'Put x and y into BOTH equations. Do the two sides come out equal each time?',
       mount(stage, submit) {
         const box = document.createElement('div');
@@ -490,12 +490,12 @@ MathLab.app('crossing', {
         stage.appendChild(box);
         MathLab.choice(stage, {
           options: [
-            { html: 'Yes — it works in both', ok: works, trap: onlyOne ? 'checked-one-only' : 'check-pair', why: onlyOne ? 'It works in one equation, not in the other. A solution has to work in BOTH.' : 'Put it in and compare both sides.' },
-            { html: 'No', ok: !works, trap: 'check-pair', why: 'Put it in: both sides come out equal, in both equations.' },
+            { html: 'Yes, it works in both', ok: works, trap: onlyOne ? 'checked-one-only' : 'check-pair', why: onlyOne ? 'It works in one equation but not the other. A solution has to work in BOTH.' : 'Put x and y into each equation. Then compare the two sides.' },
+            { html: 'No', ok: !works, trap: 'check-pair', why: 'Put x and y in. Both sides come out equal in both equations.' },
           ],
           onDone(misses) {
             addHTML(stage, '<div class="checks">' + L.checkHTML(e1, cand, ORDER, '①') + L.checkHTML(e2, cand, ORDER, '②') + '</div>');
-            submit(misses === 0, undefined, works ? 'Equal both times: that is a solution.' : 'Not equal every time, so not the solution. (It is ' + pt(sol) + '.)');
+            submit(misses === 0, undefined, works ? 'Equal both times, so it is the solution.' : 'Not equal every time, so it is not the solution. The solution is ' + pt(sol) + '.');
           },
         });
       },

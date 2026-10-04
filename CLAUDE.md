@@ -18,6 +18,8 @@ given, and a wrong answer always shows the right one.
 - **Construct backwards for clean answers.** Pick the result, then build a question that
   yields it — do not draw randomly and reject.
 - **Judge answers with `MathLab.canon()`**, never string equality. `6qp` is `6pq`.
+- **Every word a player sees follows WRITING.md** — Year 6–8 reading level, short sentences,
+  everyday words, feedback = what went wrong then what to do.
 - Comments in English. Conventional Commits.
 
 ## Testing

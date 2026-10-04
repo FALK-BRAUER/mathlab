@@ -302,14 +302,14 @@ const MathLab = (() => {
         el.feedback.className = 'feedback bad';
         el.feedback.innerHTML = 'Not quite.' +
           (why ? '<span class="why">' + why + '</span>' : '') +
-          (round.solution ? '<span class="why">Answer: <b>' + round.solution + '</b></span>' : '') + panel;
+          (round.solution ? '<span class="why">The answer is <b>' + round.solution + '</b></span>' : '') + panel;
       }
 
       // mastery nudge: five in a row on a level means it is time for the next one
       const nextLv = config.levels[level + 1];
       if (correct && streak > 0 && streak % 5 === 0 && nextLv && !/Report/.test(nextLv.name)) {
         el.feedback.insertAdjacentHTML('beforeend', '<div class="answer-row"><button type="button" class="continue" data-levelup>' +
-          streak + ' in a row — ready for ' + nextLv.name + ' →</button></div>');
+          streak + ' in a row! Try ' + nextLv.name + ' →</button></div>');
         el.feedback.querySelector('[data-levelup]').addEventListener('click', () => el.levels.children[level + 1].click());
       }
 
@@ -436,7 +436,7 @@ const MathLab = (() => {
           b.classList.add('miss');
           b.disabled = true;
           why.className = 'why-line bad';
-          why.innerHTML = opt.why || 'Not that one — look again.';
+          why.innerHTML = opt.why || 'Not that one. Look again.';
           if (opt.trap) note('trap', { trap: opt.trap });
           if (onMiss) onMiss(opt, misses);
         }

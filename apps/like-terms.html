@@ -11,18 +11,18 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>🧲 Like Terms Hunt</h1>
-    <p class="tagline">A block is a thing. Plus and minus are the joints between them.</p>
+    <p class="tagline">Each term is a block. Plus and minus sit between the blocks.</p>
   </div>
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
 <script>
 MathLab.app('like-terms', {
   emoji: '🧲',
   title: 'Like Terms Hunt',
-  tagline: 'A block is a thing. Plus and minus are the joints between them.',
-  blurb: 'Join the blocks that match. Watch the ones that do not.',
+  tagline: 'Each term is a block. Plus and minus sit between the blocks.',
+  blurb: 'Join the blocks that match. Spot the ones that never can.',
 
   build() {
   const { rnd, rndNonZero, pick, sample, shuffle, formatTerm, formatSum, signature, mathHTML } = MathLab;
@@ -68,15 +68,15 @@ MathLab.app('like-terms', {
                                  .filter((i) => i >= 0));
 
     return {
-      prompt: 'Tap every block that is the <b>same shape</b> as the glowing one, then press Check.',
+      prompt: 'Tap every block with the <b>same shape</b> as the glowing one. Then press Check.',
       question: '',
-      hint: 'Same letters <i>and</i> same powers. The number in front does not matter — ' +
+      hint: 'Same letters <i>and</i> same powers. The number in front does not matter. ' +
             '3<i class="var">pq</i> and −7<i class="var">pq</i> are the same shape.',
       solution: likes.map((t) => formatTerm(t)).join(', '),
-      rightWhy: 'Same letters with the same powers — the number in front never matters.',
-      explain: '<ol><li>The shape of ' + mathHTML(formatTerm(target)) + ' is its letters and their powers: ' + mathHTML(formatTerm({ coeff: 1, vars: target.vars })) + '.</li>' +
-        '<li>A term is the same shape only if it has exactly those letters, each to exactly that power. Order does not matter (pq = qp).</li>' +
-        '<li>Same shape here: ' + likes.map((t) => mathHTML(formatTerm(t))).join(', ') + '. The others differ in a letter or a power.</li></ol>',
+      rightWhy: 'Yes! Same letters, same powers. The number in front never matters.',
+      explain: '<ol><li>The shape of ' + mathHTML(formatTerm(target)) + ' is its letters and powers: ' + mathHTML(formatTerm({ coeff: 1, vars: target.vars })) + '.</li>' +
+        '<li>A match needs exactly those letters, each with the same power. Order does not matter (pq = qp).</li>' +
+        '<li>Same shape here: ' + likes.map((t) => mathHTML(formatTerm(t))).join(', ') + '. The others have a different letter or power.</li></ol>',
 
       mount(stage, submit) {
         const chosen = new Set();
@@ -163,10 +163,10 @@ MathLab.app('like-terms', {
     const original = formatSum(terms);
 
     const round = {
-      prompt: 'Tap two blocks to join them. Only blocks of the <b>same shape</b> can join.',
+      prompt: 'Tap two blocks to join them. Only the <b>same shape</b> can join.',
       question: '',
-      hint: 'The + and − between blocks are joints, not instructions. ' +
-            'Joining adds the numbers in front — it never changes the shape.',
+      hint: 'The + and − signs just sit between blocks. They are not orders. ' +
+            'Joining adds the numbers in front. The shape stays the same.',
       solution: '',   // filled in once the round resolves
 
       mount(stage, submit) {
@@ -195,7 +195,7 @@ MathLab.app('like-terms', {
           const bridge = document.createElement('div');
           bridge.className = 'bridge';
           bridge.innerHTML =
-            '<b>The same move, written down</b>' +
+            '<b>The same thing, written down</b>' +
             '<div class="written">' + mathHTML(original) + ' = ' + mathHTML(answer) + '</div>';
           stage.appendChild(bridge);
 
@@ -232,7 +232,7 @@ MathLab.app('like-terms', {
         function tap(i) {
           if (picked === null) {
             picked = i;
-            say('Now tap the block you want to join it to.');
+            say('Now tap the block to join it with.');
             render();
             return;
           }
@@ -253,7 +253,7 @@ MathLab.app('like-terms', {
             say(
               formatTerm(a) + ' is ' + shapeName(a.vars) + ', ' +
               formatTerm(b) + ' is ' + shapeName(b.vars) +
-              ' — different shapes never join. The joint holds.',
+              '. Different shapes never join. Pick two that match.',
               'bad',
             );
             render({ shake: [picked, i], joints: between, fuse: null });
@@ -269,7 +269,7 @@ MathLab.app('like-terms', {
           if (sum === 0) {
             live.splice(drop, 1);
             live.splice(keep, 1);
-            say(a.coeff + ' and ' + b.coeff + ' cancel — no ' + name + ' left.', 'good');
+            say(a.coeff + ' and ' + b.coeff + ' cancel out. No ' + name + ' left.', 'good');
             picked = null;
             render();
           } else {
@@ -277,7 +277,7 @@ MathLab.app('like-terms', {
             live.splice(drop, 1);
             say(
               a.coeff + ' and ' + b.coeff + ' make ' + sum + ' ' + name +
-              '. The shape did not change.',
+              '. The shape stays the same.',
               'good',
             );
             picked = null;
@@ -321,16 +321,16 @@ MathLab.app('like-terms', {
     const answer = formatSum(totals);
 
     return {
-      prompt: 'Collect the like terms and write the answer:',
+      prompt: 'Collect the like terms (same letters, same powers). Write the answer:',
       question: mathHTML(formatSum(shown)),
-      hint: 'Join the matching shapes first, then add the numbers in front. ' +
-            'The letters and powers stay exactly as they are.',
+      hint: 'Find the matching shapes. Add the numbers in front of them. ' +
+            'Keep the letters and powers as they are.',
       solution: answer,
       explain: '<ol>' + totals.map((t) => {
         const same = terms.filter((x) => signature(x) === signature(t));
-        return '<li>' + same.map((x) => mathHTML(formatTerm(x))).join(', ') + ' are the same shape: add the numbers in front, ' +
+        return '<li>' + same.map((x) => mathHTML(formatTerm(x))).join(', ') + ' are the same shape. Add the numbers in front: ' +
           same.map((x) => x.coeff).join(' + ').replace(/\+ -/g, '− ') + ' = ' + t.coeff + ' → ' + mathHTML(formatTerm(t)) + '</li>';
-      }).join('') + '<li>Different shapes stay separate: <b>' + mathHTML(answer) + '</b></li></ol>',
+      }).join('') + '<li>Different shapes stay apart: <b>' + mathHTML(answer) + '</b></li></ol>',
 
       mount(stage, submit) {
         MathLab.textAnswer(stage, submit, {

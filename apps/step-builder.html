@@ -11,21 +11,21 @@
   <div class="topbar">
     <a class="back" href="../index.html">← All apps</a>
     <h1>🪜 Step Builder</h1>
-    <p class="tagline">You choose the move. The working writes itself.</p>
+    <p class="tagline">You pick each move. The app writes out the working.</p>
   </div>
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
-<script src="../shared/algebra.js?v=58b56684"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
+<script src="../shared/algebra.js?v=f49aaedf"></script>
 <script src="../shared/problems.js?v=7ef0eb90"></script>
 <script>
 MathLab.app('step-builder', {
   emoji: '🪜',
   ownHints: true,          // this app has its own three-rung ladder
   title: 'Step Builder',
-  tagline: 'You choose the move. The working writes itself.',
-  blurb: 'Pick the next move, one step at a time, and build the whole solution.',
+  tagline: 'You pick each move. The app writes out the working.',
+  blurb: 'Pick the next move, one step at a time. Build the whole answer.',
 
   build() {
   const { pick, shuffle, mathHTML } = MathLab;
@@ -42,11 +42,11 @@ MathLab.app('step-builder', {
     const asksBanned = !!(banned && banned.values && banned.values.length);
 
     const round = {
-      prompt: problem.goal === 'factor' ? 'Write this as a product.'
-            : problem.goal === 'fraction' ? 'Cancel this down as far as it goes.'
+      prompt: problem.goal === 'factor' ? 'Write this as a product (things multiplied together).'
+            : problem.goal === 'fraction' ? 'Simplify this fraction as far as it goes.'
             : 'What is the next move?',
       question: '',
-      hint: 'Read the whole line before you touch anything.',
+      hint: 'Read the whole line before you make a move.',
       solution: '',
 
       mount(stage, submit) {
@@ -135,7 +135,7 @@ MathLab.app('step-builder', {
           paint();
 
           if (reachedGoal(problem.goal, items)) {
-            say(why + ' <b>That is as far as it goes — now say so.</b>', 'good');
+            say(why + ' <b>That is as far as it goes. Press the finish button.</b>', 'good');
             el.moves.querySelector('.done').focus();
           } else {
             say(why, 'good');
@@ -149,7 +149,7 @@ MathLab.app('step-builder', {
 
           const box = document.createElement('div');
           box.className = 'predict';
-          box.innerHTML = '<b>' + MOVES[key].label + ' — so what does that give?</b>' +
+          box.innerHTML = '<b>' + MOVES[key].label + '. What does that give?</b>' +
                           '<div class="options" data-guess></div>';
           const holder = box.querySelector('[data-guess]');
 
@@ -174,7 +174,7 @@ MathLab.app('step-builder', {
           }
 
           el.moves.insertAdjacentElement('beforebegin', box);
-          say('Pick the line it turns into.');
+          say('Pick the line you get.');
         }
 
         function claimDone() {
@@ -211,8 +211,8 @@ MathLab.app('step-builder', {
           box.className = 'banned';
           box.innerHTML =
             '<b>One more thing</b>' +
-            '<p>Which values may <i class="var">' + L + '</i> never take? ' +
-            'Take them from the bottom you <em>started</em> with.</p>' +
+            '<p>Which values can <i class="var">' + L + '</i> never be? ' +
+            'Look at the bottom of the fraction you <em>started</em> with.</p>' +
             '<div class="chips" data-banned></div>' +
             '<div class="answer-row"><button type="button" data-banned-check>Check</button></div>' +
             '<p class="why-line" data-banned-why> </p>';
@@ -253,11 +253,11 @@ MathLab.app('step-builder', {
               why.className = 'why-line bad';
               why.innerHTML = missed.length
                 ? 'Missed ' + missed.map((v) => L + ' = ' + v).join(' and ') +
-                  '. A value that cancelled away still breaks the fraction you started with.'
-                : 'Those extra ones are fine — only the bottom you started with can ban a value.';
+                  '. Cancelling hides it, but it still makes the first bottom zero.'
+                : 'You picked extra ones. Only values that make the first bottom zero are banned.';
             } else {
               why.className = 'why-line good';
-              why.innerHTML = 'Yes. Write them next to the answer — they are free marks.';
+              why.innerHTML = 'Yes! Write them next to your answer. They are easy marks.';
             }
             settle();
           });
@@ -276,7 +276,7 @@ MathLab.app('step-builder', {
             '<b>Your working</b>' +
             '<div class="written">' + mathHTML(answer) + '</div>' +
             '<p class="process">' + steps + ' step' + (steps === 1 ? '' : 's') +
-            (clean ? ' · found every move yourself ⭐️' : ' · finished it') + '</p>';
+            (clean ? ' · you found every move yourself ⭐️' : ' · finished') + '</p>';
           stage.appendChild(bridge);
 
           // Finishing is always the win — that is deliberate, and it is why `correct` is
@@ -300,34 +300,34 @@ MathLab.app('step-builder', {
           if (hintRung === 1) {
             const has = (k) => items.some((i) => i.k === k);
             say(theFraction(items) || items.filter((i) => i.k === 'f').length
-              ? 'It is a fraction. That changes everything — do <b>not</b> open brackets here.'
-              : has('x') ? 'Two fractions, side by side. Get them into one first.'
-              : has('b') || has('p') ? 'Look at the whole line first. A bracket always goes before anything else.'
-              : has('m') || has('d') || has('e') ? 'Something is being multiplied, divided or raised to a power. There is a rule for that.'
-              : problem.goal === 'factor' ? 'You are going the other way this time — towards brackets, not away from them.'
-              : 'No brackets here. So it is about shapes: which ones match?');
+              ? 'It is a fraction. Do <b>not</b> open the brackets here.'
+              : has('x') ? 'There are two fractions side by side. Make them one fraction first.'
+              : has('b') || has('p') ? 'Look at the whole line. Deal with brackets before anything else.'
+              : has('m') || has('d') || has('e') ? 'Something is multiplied, divided or raised to a power. There is a rule for that.'
+              : problem.goal === 'factor' ? 'This time you go the other way. You put brackets in, not take them out.'
+              : 'No brackets here. So look for terms that match.');
             return;
           }
 
           if (hintRung === 2) {
             const f = theFraction(items);
-            say(f ? 'Can the top or the bottom be written as a product? That is what you cancel with.'
-                  : items.some((i) => i.k === 'b' || i.k === 'p') ? 'There is still a bracket on that line.'
+            say(f ? 'Can you write the top or bottom as a product? Then you can cancel.'
+                  : items.some((i) => i.k === 'b' || i.k === 'p') ? 'There is still a bracket on the line.'
                   : items.some((i) => i.k === 'm') ? 'Two powers of the same letter are being multiplied.'
                   : problem.goal === 'factor' ? 'What do all the terms have in common?'
-                  : 'No brackets left. So look at the shapes — are any two the same?');
+                  : 'No brackets left. Are any two terms the same shape?');
             return;
           }
 
           const key = suggest(problem.goal, items);
           say(key
             ? 'The move is: <b>' + MOVES[key].label + '</b>.'
-            : 'Nothing left to do — press <b>' + DONE_LABEL[problem.goal] + '</b>.');
+            : 'Nothing left to do. Press <b>' + DONE_LABEL[problem.goal] + '</b>.');
         }
 
         el.stuck.addEventListener('click', stuck);
         paint();
-        say('Read the line, then pick a move.');
+        say('Read the line. Then pick a move.');
       },
     };
 

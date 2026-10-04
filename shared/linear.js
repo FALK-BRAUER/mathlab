@@ -581,14 +581,14 @@ const Linear = (() => {
   function valueStep(a, v, k, extra = {}) {
     const right = div(k, a);
     const traps = [
-      { value: neg(right), trap: 'value-sign', why: 'Check the sign. A negative divided by a positive is negative; two negatives make a positive.' },
-      isZero(k) ? null : { value: div(a, k), trap: 'value-upside-down', why: 'Upside down: to undo × ' + qText(a) + ', divide the other side by ' + qText(a) + '.' },
-      { value: sub(k, a), trap: 'value-subtract', why: qText(a) + v + ' means ' + qText(a) + ' × ' + v + '. Undo a multiply with a divide, not a subtract.' },
+      { value: neg(right), trap: 'value-sign', why: 'Check the sign. Negative ÷ positive is negative. Negative ÷ negative is positive.' },
+      isZero(k) ? null : { value: div(a, k), trap: 'value-upside-down', why: 'That is upside down. To undo × ' + qText(a) + ', divide the other side by ' + qText(a) + '.' },
+      { value: sub(k, a), trap: 'value-subtract', why: qText(a) + v + ' means ' + qText(a) + ' × ' + v + '. To undo a multiply, divide. Don\'t take away.' },
     ];
     return {
       kind: 'value',
       v,
-      because: 'Undo the × ' + qText(a) + ': divide both sides by ' + qText(a) + '. ' + qText(k) + ' ÷ ' + qText(a) + ' = ' + qText(right) + '.',
+      because: 'Divide both sides by ' + qText(a) + '. That undoes the × ' + qText(a) + '. ' + qText(k) + ' ÷ ' + qText(a) + ' = ' + qText(right) + '.',
       prompt: extra.prompt || 'So ' + v + ' = ?',
       context: extra.context || MathLab.mathHTML(sideHTML([T(a, v)]) + ' = ' + qHTML(k)),
       answer: right,
@@ -611,18 +611,18 @@ const Linear = (() => {
 
     let A = e1, B = e2;
     const scaleTraps = (e, f) => [
-      { value: E(scale(e, f).co, e.k), trap: 'scale-not-rhs', why: 'Every term gets multiplied — the number on the right too.' },
-      { value: E({ ...e.co, [order[0]]: mul(coef(e, order[0]), f) }, e.k), trap: 'scale-first-only', why: 'Multiply the whole line, not just the first term.' },
-      { value: E({ ...scale(e, f).co }, mul(e.k, add(f, 1))), trap: 'scale-arith', why: 'Check the right-hand side: ' + qText(e.k) + ' × ' + qText(f) + ' = ' + qText(mul(e.k, f)) + '.' },
+      { value: E(scale(e, f).co, e.k), trap: 'scale-not-rhs', why: 'You missed the number on the right. Multiply every term, that one too.' },
+      { value: E({ ...e.co, [order[0]]: mul(coef(e, order[0]), f) }, e.k), trap: 'scale-first-only', why: 'You only multiplied the first term. Multiply every term in the line.' },
+      { value: E({ ...scale(e, f).co }, mul(e.k, add(f, 1))), trap: 'scale-arith', why: 'The number on the right is off. ' + qText(e.k) + ' × ' + qText(f) + ' = ' + qText(mul(e.k, f)) + '.' },
     ];
     for (const [idx, e, f] of [[1, e1, f1], [2, e2, f2]]) {
       if (eq(f, 1)) continue;
       const right = scale(e, f);
       steps.push({
         kind: 'eq',
-        prompt: 'Multiply equation ' + (idx === 1 ? '①' : '②') + ' by ' + qText(f) + ' so the ' + u + '-terms match. What does it become?',
+        prompt: 'Multiply equation ' + (idx === 1 ? '①' : '②') + ' by ' + qText(f) + '. Then the ' + u + '-terms match. What do you get?',
         tag: (idx === 1 ? '①' : '②') + ' × ' + qText(f),
-        because: 'Every term × ' + qText(f) + ' — the right-hand side too. Now the ' + u + '-term is ' + qText(coef(right, u)) + u + ', the same size as in the other equation.',
+        because: 'Multiply every term by ' + qText(f) + '. The number on the right too. Now the ' + u + '-term is ' + qText(coef(right, u)) + u + '. That is the same size as in the other equation.',
         answer: right,
         mustMatch: { [u]: coef(right, u) },
         options: choices({ value: right }, scaleTraps(e, f), sameEq),
@@ -636,14 +636,14 @@ const Linear = (() => {
     steps.push({
       kind: 'pick',
       prompt: 'The ' + u + '-terms are ' + MathLab.mathHTML(sideHTML([T(coef(A, u), u)])) + ' and ' +
-        MathLab.mathHTML(sideHTML([T(coef(B, u), u)])) + '. Add the equations or subtract them?',
+        MathLab.mathHTML(sideHTML([T(coef(B, u), u)])) + '. Do you add the equations or subtract them?',
       options: [
         { value: 'add', label: 'Add them', ok: !same, trap: 'add-vs-subtract',
           because: 'Opposite signs: ' + qText(coef(A, u)) + u + ' + (' + qText(coef(B, u)) + u + ') = 0. Adding makes ' + u + ' disappear.',
-          why: 'Adding ' + qText(coef(A, u)) + u + ' and ' + qText(coef(B, u)) + u + ' gives ' + qText(add(coef(A, u), coef(B, u))) + u + ' — nothing disappears. Same signs: subtract.' },
+          why: 'Adding ' + qText(coef(A, u)) + u + ' and ' + qText(coef(B, u)) + u + ' gives ' + qText(add(coef(A, u), coef(B, u))) + u + '. Nothing disappears. The signs are the same, so subtract.' },
         { value: 'sub', label: 'Subtract them', ok: same, trap: 'add-vs-subtract',
           because: 'Same signs: ' + qText(coef(A, u)) + u + ' − (' + qText(coef(B, u)) + u + ') = 0. Subtracting makes ' + u + ' disappear.',
-          why: 'Subtracting gives ' + qText(sub(coef(A, u), coef(B, u))) + u + ' — nothing disappears. Opposite signs: add.' },
+          why: 'Subtracting gives ' + qText(sub(coef(A, u), coef(B, u))) + u + '. Nothing disappears. The signs are opposite, so add.' },
       ],
     });
 
@@ -652,12 +652,12 @@ const Linear = (() => {
     const traps = [];
     if (same) {
       traps.push({ value: tidy(E({ [w]: sub(coef(A, w), coef(B, w)) }, add(A.k, B.k))), trap: 'subtract-rhs',
-        why: 'Subtract the right-hand sides too: ' + qText(A.k) + ' − (' + qText(B.k) + ').' });
+        why: 'You forgot the right side. Subtract those numbers too: ' + qText(A.k) + ' − (' + qText(B.k) + ').' });
       traps.push({ value: tidy(E({ [w]: add(coef(A, w), coef(B, w)) }, C.k)), trap: 'subtract-negative',
-        why: 'Taking away ' + qText(coef(B, w)) + w + ' changes its sign: ' + qText(coef(A, w)) + w + ' − (' + qText(coef(B, w)) + w + ').' });
+        why: 'Watch the sign. Taking away ' + qText(coef(B, w)) + w + ' flips its sign: ' + qText(coef(A, w)) + w + ' − (' + qText(coef(B, w)) + w + ').' });
     } else {
       traps.push({ value: tidy(E({ [w]: add(coef(A, w), coef(B, w)) }, sub(A.k, B.k))), trap: 'add-rhs',
-        why: 'You are adding the equations, so add the right-hand sides too.' });
+        why: 'You forgot the right side. Add the numbers on the right too.' });
     }
     traps.push({ value: tidy(E({ [w]: neg(coef(C, w)) }, C.k)), trap: 'collect-flip',
       why: 'Check the sign of the ' + w + '-term: ' + qText(coef(A, w)) + w + (same ? ' − (' : ' + (') + qText(coef(B, w)) + w + ').' });
@@ -666,14 +666,14 @@ const Linear = (() => {
     if (sign(aw) !== sign(bw) && !isZero(bw)) {
       const slip = Q(sign(aw) * (Math.abs(num(aw)) + Math.abs(num(bw))) * aw.d * bw.d, aw.d * bw.d);
       traps.push({ value: tidy(E({ [w]: slip }, C.k)), trap: 'collect-sign',
-        why: 'Walk it on a number line: start at ' + qText(aw) + ', move ' + qText(bw) + '. One sign is up, the other is down.' });
+        why: 'Use a number line. Start at ' + qText(aw) + ' and move ' + qText(bw) + '. Plus goes up, minus goes down.' });
     }
     steps.push({
       kind: 'eq',
       prompt: (same ? 'Subtract ② from ①' : 'Add ① and ②') + '. What is left?',
       tag: same ? '① − ②' : '① + ②',
-      because: 'Term by term: the ' + u + '-terms cancel, ' + qText(coef(A, w)) + w + (same ? ' − (' : ' + (') + qText(coef(B, w)) + w + ') = ' + qText(coef(one, w)) + w +
-        ', and on the right ' + qText(A.k) + (same ? ' − (' : ' + (') + qText(B.k) + ') = ' + qText(one.k) + '. One letter left.',
+      because: 'The ' + u + '-terms cancel. Then ' + qText(coef(A, w)) + w + (same ? ' − (' : ' + (') + qText(coef(B, w)) + w + ') = ' + qText(coef(one, w)) + w +
+        '. On the right, ' + qText(A.k) + (same ? ' − (' : ' + (') + qText(B.k) + ') = ' + qText(one.k) + '. Only one letter is left.',
       answer: one,
       mustMatch: { [u]: Q(0) },
       options: choices({ value: one }, traps, sameEq),
@@ -699,13 +699,13 @@ const Linear = (() => {
     const right = { value: prod };
     const traps = [
       { value: val, trap: 'sub-coefficient', why: qText(cK) + known + ' means ' + qText(cK) + ' × ' + known + '. Multiply: ' + qText(cK) + ' × ' + qText(val) + '.' },
-      { value: neg(prod), trap: 'sub-sign', why: qText(cK) + ' × ' + qText(val) + ': check the sign of the product.' },
+      { value: neg(prod), trap: 'sub-sign', why: 'Check the sign when you work out ' + qText(cK) + ' × ' + qText(val) + '.' },
     ];
     const s1 = {
       kind: 'line',
       prompt: 'Put ' + known + ' = ' + qText(val) + ' into ' + tag + '. Which line do you get?',
       tag: known + ' = ' + qText(val) + ' in ' + tag,
-      because: 'Swap ' + known + ' for ' + qText(val) + ': ' + qText(cK) + ' × ' + qText(val) + ' = ' + qText(prod) + '. Everything else stays.',
+      because: 'Swap ' + known + ' for ' + qText(val) + '. Then ' + qText(cK) + ' × ' + qText(val) + ' = ' + qText(prod) + '. Everything else stays the same.',
       answer: E({ [unknown]: cU }, sub(e.k, prod)),
       mustMatch: { [unknown]: cU },
       options: choices(right, traps, sameQ).map((o) => ({ ...o, disp: { L: shown(o.value), R: [T(e.k)] } })),
@@ -715,11 +715,11 @@ const Linear = (() => {
     const s2 = valueStep(cU, unknown, rest, {
       context: MathLab.mathHTML(sideHTML(shown(prod)) + ' = ' + qHTML(e.k)),
     });
-    s2.because = 'Move ' + qText(prod) + ' to the other side (its sign flips): ' + qText(cU) + unknown + ' = ' + qText(e.k) + ' − (' + qText(prod) + ') = ' + qText(rest) +
-      '. Then ÷ ' + qText(cU) + ': ' + unknown + ' = ' + qText(div(rest, cU)) + '.';
+    s2.because = 'Move ' + qText(prod) + ' to the other side. Its sign flips. ' + qText(cU) + unknown + ' = ' + qText(e.k) + ' − (' + qText(prod) + ') = ' + qText(rest) +
+      '. Then divide by ' + qText(cU) + ': ' + unknown + ' = ' + qText(div(rest, cU)) + '.';
     // the extra slip here: moving the number across without changing its sign
     s2.options = choices({ value: div(rest, cU) }, [
-      { value: div(add(e.k, prod), cU), trap: 'move-sign', why: 'Moving ' + qText(prod) + ' to the other side changes its sign.' },
+      { value: div(add(e.k, prod), cU), trap: 'move-sign', why: 'Watch the sign. Moving ' + qText(prod) + ' to the other side flips it.' },
       ...s2.options.filter((o) => !o.ok),
     ], sameQ);
     return [s1, s2];
@@ -752,14 +752,14 @@ const Linear = (() => {
     const wrongLetter = { L: [{ c: a, v: '(' + bracket + ')', raw: (eq(abs(a), 1) ? '' : qText(abs(a))) + '(' + bracketHTML + ')' }, T(b, solved)], R: [T(k)] };
     steps.push({
       kind: 'show',
-      prompt: 'Swap ' + solved + ' in ② for what it equals in ①. Which line is that?',
+      prompt: 'In ②, swap ' + solved + ' for what it equals in ①. Which line is that?',
       tag: 'put ① into ②',
-      because: '① says ' + solved + ' is the same as ' + bracket + ', so that whole bracket goes where ' + solved + ' was. Now only ' + free + ' is left.',
+      because: '① says ' + solved + ' is the same as ' + bracket + '. Put that whole bracket where ' + solved + ' was. Now only ' + free + ' is left.',
       options: [
         { disp: withBracket, ok: true },
         // with 1 in front, dropping the bracket changes nothing — so it is no mistake there
-        eq(b, 1) ? null : { disp: noBracket, ok: false, trap: 'sub-no-bracket', why: 'Keep the bracket: ' + qText(b) + ' multiplies all of (' + bracket + '), not just the first part.' },
-        { disp: wrongLetter, ok: false, trap: 'sub-wrong-letter', why: 'You swap out ' + solved + ' — the letter ① tells you about — not ' + free + '.' },
+        eq(b, 1) ? null : { disp: noBracket, ok: false, trap: 'sub-no-bracket', why: 'Keep the bracket. ' + qText(b) + ' multiplies all of (' + bracket + '), not just the first part.' },
+        { disp: wrongLetter, ok: false, trap: 'sub-wrong-letter', why: 'Wrong letter. Swap out ' + solved + ', the letter ① tells you about. Leave ' + free + ' alone.' },
       ].filter(Boolean),
       answer: tidy(E({ [free]: add(a, mul(b, m)) }, sub(k, mul(b, c)))),
       written: withBracket,
@@ -770,11 +770,11 @@ const Linear = (() => {
     const expRight = freeFirst ? [T(a, free), T(bm, free), T(bc)] : [T(bm, free), T(bc), T(a, free)];
     const expTraps = [
       { L: freeFirst ? [T(a, free), T(bm, free), T(neg(bc))] : [T(bm, free), T(neg(bc)), T(a, free)], trap: 'expand-sign',
-        why: qText(b) + ' × ' + qText(c) + ' = ' + qText(bc) + '. The sign in front of the bracket multiplies every term.' },
+        why: 'Check the sign. ' + qText(b) + ' × ' + qText(c) + ' = ' + qText(bc) + '. The sign in front of the bracket goes to every term.' },
       { L: freeFirst ? [T(a, free), T(bm, free), T(c)] : [T(bm, free), T(c), T(a, free)], trap: 'expand-first-only',
-        why: 'Multiply both terms in the bracket: ' + qText(b) + ' × ' + qText(c) + ' too.' },
+        why: 'You missed the second term. Multiply it too: ' + qText(b) + ' × ' + qText(c) + '.' },
       { L: freeFirst ? [T(a, free), T(m, free), T(bc)] : [T(m, free), T(bc), T(a, free)], trap: 'expand-skip-term',
-        why: qText(b) + ' multiplies the ' + free + '-term too: ' + qText(b) + ' × ' + qText(m) + free + ' = ' + qText(bm) + free + '.' },
+        why: qText(b) + ' multiplies the ' + free + '-term too. ' + qText(b) + ' × ' + qText(m) + free + ' = ' + qText(bm) + free + '.' },
     ];
     // keep only traps that differ from the right line AND from each other
     const sig = (terms) => terms.map((t) => qText(t.c) + (t.v || '')).join(',');
@@ -782,9 +782,9 @@ const Linear = (() => {
     const expKeep = expTraps.filter((t) => { const k = sig(t.L); if (seenExp.has(k)) return false; seenExp.add(k); return true; });
     steps.push({
       kind: 'show',
-      prompt: 'Open the bracket. What do you get?',
+      prompt: 'Multiply out the bracket. What do you get?',
       tag: 'open the bracket',
-      because: qText(b) + ' multiplies BOTH terms: ' + qText(b) + ' × ' + qText(m) + free + ' = ' + qText(bm) + free + ' and ' + qText(b) + ' × ' + qText(c) + ' = ' + qText(bc) + '.',
+      because: qText(b) + ' multiplies BOTH terms. ' + qText(b) + ' × ' + qText(m) + free + ' = ' + qText(bm) + free + ' and ' + qText(b) + ' × ' + qText(c) + ' = ' + qText(bc) + '.',
       options: [{ disp: { L: expRight, R: [T(k)] }, ok: true },
         ...expKeep.map((t) => ({ disp: { L: t.L, R: [T(k)] }, ok: false, trap: t.trap, why: t.why }))],
       answer: tidy(E({ [free]: add(a, bm) }, sub(k, bc))),
@@ -797,18 +797,18 @@ const Linear = (() => {
     if (sign(a) !== sign(bm)) {
       const first = freeFirst ? a : bm;
       const slip = Q(sign(first) * (Math.abs(num(a)) + Math.abs(num(bm))) * a.d * bm.d, a.d * bm.d);
-      colTraps.push({ c: slip, trap: 'collect-sign', why: 'Walk it on a number line: start at ' + qText(freeFirst ? a : bm) + ', then move ' + qText(freeFirst ? bm : a) + '.' });
+      colTraps.push({ c: slip, trap: 'collect-sign', why: 'Use a number line. Start at ' + qText(freeFirst ? a : bm) + ', then move ' + qText(freeFirst ? bm : a) + '.' });
     }
     colTraps.push({ c: neg(tot), trap: 'collect-flip', why: qText(freeFirst ? a : bm) + ' and ' + qText(freeFirst ? bm : a) + ' together make ' + qText(tot) + '. Check the sign.' });
-    colTraps.push({ c: mul(a, bm), trap: 'collect-multiply', why: 'Like terms are added, not multiplied: ' + qText(a) + ' + (' + qText(bm) + ').' });
+    colTraps.push({ c: mul(a, bm), trap: 'collect-multiply', why: 'Add like terms. Don\'t multiply them. Work out ' + qText(a) + ' + (' + qText(bm) + ').' });
     const colRight = [T(tot, free), T(bc)];
     const colOpts = [{ disp: { L: colRight, R: [T(k)] }, ok: true }];
     for (const t of colTraps) {
       if (eq(t.c, tot) || colOpts.some((o) => eq(o.disp.L[0].c, t.c))) continue;
       colOpts.push({ disp: { L: [T(t.c, free), T(bc)], R: [T(k)] }, ok: false, trap: t.trap, why: t.why });
     }
-    steps.push({ kind: 'show', prompt: 'Collect the ' + free + '-terms.', tag: 'collect', options: colOpts,
-      because: qText(a) + free + ' and ' + qText(bm) + free + ' are like terms: ' + qText(a) + ' + (' + qText(bm) + ') = ' + qText(tot) + '.',
+    steps.push({ kind: 'show', prompt: 'Collect the ' + free + '-terms. Put them together.', tag: 'collect', options: colOpts,
+      because: qText(a) + free + ' and ' + qText(bm) + free + ' are like terms (same letter). So ' + qText(a) + ' + (' + qText(bm) + ') = ' + qText(tot) + '.',
       answer: tidy(E({ [free]: tot }, sub(k, bc))), written: { L: colRight, R: [T(k)] } });
 
     // 4. move the number across
@@ -816,9 +816,9 @@ const Linear = (() => {
     const moveOpts = [{ disp: { L: [T(tot, free)], R: [T(rhs)] }, ok: true }];
     if (!isZero(bc)) {
       moveOpts.push({ disp: { L: [T(tot, free)], R: [T(add(k, bc))] }, ok: false, trap: 'move-sign',
-        why: 'Moving ' + qText(bc) + ' to the other side changes its sign: ' + qText(k) + ' − (' + qText(bc) + ').' });
-      steps.push({ kind: 'show', prompt: 'Get the number on its own side.', tag: 'move the number', options: moveOpts,
-        because: qText(bc) + ' moves across and flips sign: ' + qText(k) + ' − (' + qText(bc) + ') = ' + qText(rhs) + '.',
+        why: 'Watch the sign. Moving ' + qText(bc) + ' to the other side flips it. Work out ' + qText(k) + ' − (' + qText(bc) + ').' });
+      steps.push({ kind: 'show', prompt: 'Move the number to the other side.', tag: 'move the number', options: moveOpts,
+        because: qText(bc) + ' moves across, so its sign flips. ' + qText(k) + ' − (' + qText(bc) + ') = ' + qText(rhs) + '.',
         answer: E({ [free]: tot }, rhs), written: { L: [T(tot, free)], R: [T(rhs)] } });
     }
 
@@ -832,13 +832,13 @@ const Linear = (() => {
       kind: 'value',
       v: solved,
       prompt: 'Now put ' + free + ' = ' + qText(fVal) + ' back into ①. So ' + solved + ' = ?',
-      because: qText(m) + ' × ' + qText(fVal) + ' = ' + qText(prod) + ', then + ' + qText(c) + ' gives ' + qText(sVal) + '.',
+      because: qText(m) + ' × ' + qText(fVal) + ' = ' + qText(prod) + '. Then add ' + qText(c) + '. That gives ' + qText(sVal) + '.',
       showContext: true,
       context: MathLab.mathHTML(solved + ' = ' + sideHTML([{ c: m, v: '(' + qText(fVal) + ')', raw: (eq(abs(m), 1) ? '' : qText(abs(m))) + '(' + qHTML(fVal) + ')' }, T(c)])),
       answer: sVal,
       options: choices({ value: sVal }, [
-        { value: add(neg(prod), c), trap: 'sub-sign', why: qText(m) + ' × ' + qText(fVal) + ' = ' + qText(prod) + '. Check the sign of the product.' },
-        { value: add(fVal, c), trap: 'sub-coefficient', why: qText(m) + free + ' means ' + qText(m) + ' × ' + free + ' — multiply first.' },
+        { value: add(neg(prod), c), trap: 'sub-sign', why: qText(m) + ' × ' + qText(fVal) + ' = ' + qText(prod) + '. Check the sign of that answer.' },
+        { value: add(fVal, c), trap: 'sub-coefficient', why: qText(m) + free + ' means ' + qText(m) + ' × ' + free + '. Multiply first.' },
         { value: sub(prod, c), trap: 'value-sign', why: 'Then add ' + qText(c) + ': ' + qText(prod) + ' + (' + qText(c) + ').' },
       ], sameQ),
     });

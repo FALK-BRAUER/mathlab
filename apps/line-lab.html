@@ -16,15 +16,15 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=efd654da"></script>
-<script src="../shared/linear.js?v=ee1df055"></script>
+<script src="../shared/engine.js?v=573a6efc"></script>
+<script src="../shared/linear.js?v=0ada118e"></script>
 <script src="../shared/grid.js?v=16d8f245"></script>
 <script>
 MathLab.app('line-lab', {
   emoji: '📈',
   title: 'Line Lab',
   tagline: 'Read a line, draw it, find where it hits the axes.',
-  blurb: 'Gradient and intercept: read them, rearrange for them, draw the line on a grid.',
+  blurb: 'Find how steep a line is and where it crosses the y-axis. Then draw it on a grid.',
 
   build() {
   const { rnd, rndNonZero, pick, mathHTML, note } = MathLab;
@@ -37,22 +37,22 @@ MathLab.app('line-lab', {
   /** The gradient a slip produces, named — so feedback can say WHICH mistake it was. */
   function diagnoseGradient(got, m, c, written) {
     if (isZero(got) && eq(L.abs(m), 1)) {
-      return { trap: 'implicit-one', why: (m.n < 0 ? '−x' : 'x') + ' means ' + qText(m) + ' × x. The gradient is ' + qText(m) + ', not 0.' };
+      return { trap: 'implicit-one', why: (m.n < 0 ? '−x' : 'x') + ' means ' + qText(m) + ' × x. So the gradient is ' + qText(m) + ', not 0.' };
     }
     if (written && eq(got, written) && !eq(written, m)) {
       return { trap: 'coefficient-as-gradient', why: 'The number in front of x only gives the gradient once y is on its own.' };
     }
-    if (eq(got, neg(m))) return { trap: 'gradient-sign', why: 'Check the sign of the gradient: ' + (m.n < 0 ? 'this line goes downhill, so it is negative.' : 'this line goes uphill, so it is positive.') };
-    if (eq(got, c) && !eq(c, m)) return { trap: 'm-c-swapped', why: 'You have the intercept there. The gradient is the number with x.' };
-    if (isZero(m)) return { trap: 'flat-gradient', why: 'There is no x at all, so the line is flat: gradient 0.' };
-    return { trap: 'gradient-other', why: 'The gradient is the number multiplying x once the line reads y = mx + c.' };
+    if (eq(got, neg(m))) return { trap: 'gradient-sign', why: 'Check the sign of the gradient. ' + (m.n < 0 ? 'This line goes downhill, so it is negative.' : 'This line goes uphill, so it is positive.') };
+    if (eq(got, c) && !eq(c, m)) return { trap: 'm-c-swapped', why: 'That is the y-intercept. The gradient is the number in front of x.' };
+    if (isZero(m)) return { trap: 'flat-gradient', why: 'There is no x at all. So the line is flat and the gradient is 0.' };
+    return { trap: 'gradient-other', why: 'Write the line as y = mx + c. The gradient is the number in front of x.' };
   }
 
   function diagnoseIntercept(got, m, c) {
-    if (eq(got, neg(c))) return { trap: 'intercept-sign', why: 'Check the sign: the line crosses the y-axis at ' + qText(c) + '.' };
+    if (eq(got, neg(c))) return { trap: 'intercept-sign', why: 'Check the sign. The line crosses the y-axis at ' + qText(c) + '.' };
     if (!isZero(m) && eq(got, div(neg(c), m))) return { trap: 'intercept-x-axis', why: 'That is where it crosses the x-axis. The y-intercept is where x = 0.' };
     if (eq(got, m) && !eq(c, m)) return { trap: 'm-c-swapped', why: 'That is the gradient. The y-intercept is the number on its own.' };
-    return { trap: 'intercept-other', why: 'Put x = 0: what is y? That is where it crosses the y-axis.' };
+    return { trap: 'intercept-other', why: 'Put x = 0 and work out y. That is where the line crosses the y-axis.' };
   }
 
   /* ---------------- explanations, with this question's own numbers ---------------- */
@@ -63,12 +63,12 @@ MathLab.app('line-lab', {
   function explainRead(e, m, c, shownHTML) {
     const std = lineHTML(L.layoutLine(e));
     const steps = [];
-    if (isZero(m)) steps.push('There is no x-term at all: y is the same everywhere. Flat line, gradient <b>0</b>.');
-    else steps.push('Line it up with ' + M('y = <i class="var">m</i>x + <i class="var">c</i>') + (shownHTML !== std ? ': ' + M(shownHTML) + ' is the same as ' + M(std) : ': ' + M(std)) + '.');
-    if (eq(L.abs(m), 1)) steps.push(M(m.n < 0 ? '−x' : 'x') + ' means ' + M(qText(m) + ' × x') + ', so the gradient is <b>' + qHTML(m) + '</b> — not 0.');
-    else if (!isZero(m)) steps.push('The number multiplying x is the gradient: <b>' + qHTML(m) + '</b>' + (m.d > 1 ? ' — up ' + m.n + ' for every ' + m.d + ' across' : '') + '.');
-    steps.push(isZero(c) ? 'No number on its own, so it crosses the y-axis at <b>0</b> (through the origin).'
-      : 'The number on its own is where it crosses the y-axis: <b>' + qHTML(c) + '</b>, the point ' + M(pt(0, c)) + '. Check: put x = 0 and y = ' + qText(c) + '.');
+    if (isZero(m)) steps.push('There is no x-term. So y is the same everywhere. The line is flat and the gradient (how steep it is) is <b>0</b>.');
+    else steps.push('Match it to ' + M('y = <i class="var">m</i>x + <i class="var">c</i>') + (shownHTML !== std ? '. ' + M(shownHTML) + ' is the same as ' + M(std) : '. Here it is ' + M(std)) + '.');
+    if (eq(L.abs(m), 1)) steps.push(M(m.n < 0 ? '−x' : 'x') + ' means ' + M(qText(m) + ' × x') + '. So the gradient (how steep it is) is <b>' + qHTML(m) + '</b>, not 0.');
+    else if (!isZero(m)) steps.push('The number in front of x is the gradient (how steep it is): <b>' + qHTML(m) + '</b>' + (m.d > 1 ? '. That means up ' + m.n + ' for every ' + m.d + ' across' : '') + '.');
+    steps.push(isZero(c) ? 'There is no number on its own. So it crosses the y-axis at <b>0</b>. It goes through the origin.'
+      : 'The number on its own is the y-intercept (where it crosses the y-axis): <b>' + qHTML(c) + '</b>. That is the point ' + M(pt(0, c)) + '. Check it: put x = 0 and you get y = ' + qText(c) + '.');
     return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
   }
 
@@ -76,9 +76,9 @@ MathLab.app('line-lab', {
   function explainRearrange(e, shownHTML) {
     const a = L.coef(e, 'x'), b = L.coef(e, 'y');
     const steps = ['Start: ' + M(shownHTML)];
-    steps.push('Keep the y-term on the left, move the rest across (each sign flips): ' + M(lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] })));
+    steps.push('Keep the y-term on the left. Move the rest across. Each sign flips: ' + M(lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] })));
     if (!eq(b, 1)) steps.push('Divide EVERY term by ' + qHTML(b) + ': ' + M(lineHTML(L.layoutLine(e))));
-    steps.push('Now read it: gradient ' + M(qHTML(L.gradient(e))) + ', y-intercept ' + M(qHTML(L.yIntercept(e))) + '.');
+    steps.push('Now read it. Gradient (how steep it is): ' + M(qHTML(L.gradient(e))) + '. Y-intercept (where it crosses the y-axis): ' + M(qHTML(L.yIntercept(e))) + '.');
     return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
   }
 
@@ -86,15 +86,15 @@ MathLab.app('line-lab', {
   function explainDraw(e, m, c) {
     if (m === null) {
       const k = L.div(e.k, L.coef(e, 'x'));
-      return 'Every point on ' + M(lineHTML(L.layoutLine(e))) + ' has x = ' + qText(k) + ', whatever y is: ' + M(pt(k, 0)) + ', ' + M(pt(k, 1)) + ', ' + M(pt(k, 2)) + ' … That is a straight up-and-down line through x = ' + qText(k) + '.';
+      return 'Every point on ' + M(lineHTML(L.layoutLine(e))) + ' has x = ' + qText(k) + '. It does not matter what y is: ' + M(pt(k, 0)) + ', ' + M(pt(k, 1)) + ', ' + M(pt(k, 2)) + ' … So it is a straight up-and-down line through x = ' + qText(k) + '.';
     }
-    if (isZero(m)) return 'Every point has y = ' + qText(c) + ': ' + M(pt(0, c)) + ', ' + M(pt(1, c)) + ' … a flat line at height ' + qText(c) + '.';
+    if (isZero(m)) return 'Every point has y = ' + qText(c) + ': ' + M(pt(0, c)) + ', ' + M(pt(1, c)) + ' … So it is a flat line at height ' + qText(c) + '.';
     const run = m.d, rise = m.n;
     const p2 = { x: Q(run), y: L.add(c, rise) };
-    return '<ol><li>Start where it crosses the y-axis: ' + M(pt(0, c)) + '.</li>' +
-      '<li>Gradient ' + M(qHTML(m)) + ' = ' + (rise < 0 ? 'down ' + -rise : 'up ' + rise) + ' for every ' + run + ' across' + (run === 1 ? '' : ' (the bottom of the fraction is the steps across)') + '.</li>' +
+    return '<ol><li>Start at the y-intercept (where it crosses the y-axis): ' + M(pt(0, c)) + '.</li>' +
+      '<li>The gradient (how steep it is) is ' + M(qHTML(m)) + '. That means ' + (rise < 0 ? 'down ' + -rise : 'up ' + rise) + ' for every ' + run + ' across' + (run === 1 ? '' : '. The bottom of the fraction is the steps across') + '.</li>' +
       '<li>From ' + M(pt(0, c)) + ' go ' + run + ' right and ' + (rise < 0 ? -rise + ' down' : rise + ' up') + ': ' + M(pt(p2.x, p2.y)) + '.</li>' +
-      '<li>Join the two points and extend the line both ways.</li></ol>';
+      '<li>Join the two points. Then extend the line both ways.</li></ol>';
   }
 
   /* ---------------- 📖 worked example ---------------- */
@@ -109,17 +109,17 @@ MathLab.app('line-lab', {
     return {
       noScore: true,
       noHint: true,
-      prompt: '📖 Watch one line go from equation to graph — tap for each step.',
+      prompt: '📖 Watch one line go from equation to graph. Tap for each step.',
       question: shown,
       mount(stage, submit) {
         const steps = [
-          { html: lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] }), because: 'Get y on its own: move the x-term across, and its sign flips.' },
+          { html: lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] }), because: 'Get y on its own. Move the x-term across. Its sign flips.' },
           ...(eq(b, 1) ? [] : [{ html: lineHTML(L.layoutLine(e)), because: 'Divide every term by ' + qText(b) + '.' }]),
-          { html: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c), because: 'In y = mx + c: the number with x is the gradient, the number on its own is where it crosses the y-axis.' },
-          { html: 'start at ' + pt(0, c), because: 'The y-intercept is a point ON the y-axis: x is 0 there.' },
-          { html: 'next point ' + pt(Q(m.d), L.add(c, m.n)), because: 'Gradient ' + qText(m) + ': ' + (m.n < 0 ? 'down ' + -m.n : 'up ' + m.n) + ' for every ' + m.d + ' across.' },
-          ...(xi && L.isInt(xi) && !isZero(xi) ? [{ html: 'check: crosses the x-axis at ' + pt(xi, 0), because: 'Put y = 0 in ' + shown.replace(/<[^>]+>/g, '') + ' and solve for x — it should be on your line.' }] : []),
-          { html: 'join and extend', because: 'Two points make the line. A third (like the x-intercept) catches mistakes.' },
+          { html: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c), because: 'In y = mx + c, the number in front of x is the gradient (how steep it is). The number on its own is the y-intercept (where it crosses the y-axis).' },
+          { html: 'start at ' + pt(0, c), because: 'The y-intercept is a point ON the y-axis. So x is 0 there.' },
+          { html: 'next point ' + pt(Q(m.d), L.add(c, m.n)), because: 'Gradient ' + qText(m) + ' means ' + (m.n < 0 ? 'down ' + -m.n : 'up ' + m.n) + ' for every ' + m.d + ' across.' },
+          ...(xi && L.isInt(xi) && !isZero(xi) ? [{ html: 'check: crosses the x-axis at ' + pt(xi, 0), because: 'Put y = 0 in ' + shown.replace(/<[^>]+>/g, '') + ' and solve for x. This point should be on your line.' }] : []),
+          { html: 'join and extend', because: 'Two points make the line. A third point, like the x-intercept, catches mistakes.' },
         ];
         MathLab.worked(stage, { steps, tryLevel: 1, onDone() {} });
         const grid = Grid.create(stage, {});
@@ -145,12 +145,12 @@ MathLab.app('line-lab', {
     const shown = lineHTML(constFirst ? L.layoutFor(e, 'y', true) : L.layoutLine(e));
 
     const round = {
-      prompt: 'What are the gradient and the y-intercept?',
+      prompt: 'What are the gradient (how steep it is) and the y-intercept (where it crosses the y-axis)?',
       question: shown,
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c),
       explain: () => explainRead(e, m, c, shown),
-      rightWhy: 'Gradient ' + qHTML(m) + ' (the number with x), y-intercept ' + qHTML(c) + ' (the number on its own).',
-      hint: 'Line it up with y = <i class="var">m</i>x + <i class="var">c</i>. The number with x is the gradient; the number on its own is where it crosses the y-axis.',
+      rightWhy: 'Yes! Gradient ' + qHTML(m) + ' is the number in front of x. Y-intercept ' + qHTML(c) + ' is the number on its own.',
+      hint: 'Match it to y = <i class="var">m</i>x + <i class="var">c</i>. The number in front of x is the gradient. The number on its own is where it crosses the y-axis.',
       mount(stage, submit) {
         MathLab.fields(stage, {
           fields: [{ key: 'm', label: 'gradient', long: true }, { key: 'c', label: 'y-intercept', long: true }],
@@ -159,9 +159,9 @@ MathLab.app('line-lab', {
             const empty = Object.keys(v).filter((k) => !v[k]);
             if (empty.length) {
               note('unfinished', { what: 'one of gradient/intercept' });
-              return { ok: false, why: 'Fill in both — the question asks for the gradient AND the intercept.', wrong: empty };
+              return { ok: false, why: 'Fill in both boxes. You need the gradient AND the y-intercept.', wrong: empty };
             }
-            if (!gm || !gc) return { ok: false, why: 'I can\'t read that. Use a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
+            if (!gm || !gc) return { ok: false, why: 'I can\'t read that. Type a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
             const okM = eq(gm, m), okC = eq(gc, c);
             if (okM && okC) { submit(true); return { ok: true, right: ['m', 'c'] }; }
             const why = [];
@@ -191,12 +191,12 @@ MathLab.app('line-lab', {
     const steps = (isZero(a) ? '' : lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(k)] }) + ', then ÷ ' + qHTML(b) + ': ') + lineHTML(L.layoutLine(e));
 
     return {
-      prompt: 'Get <i class="var">y</i> on its own first. Gradient and y-intercept?',
+      prompt: 'Get <i class="var">y</i> on its own first. Then find the gradient (how steep it is) and the y-intercept (where it crosses the y-axis).',
       question: lineHTML(disp),
       explain: () => explainRearrange(e, lineHTML(disp)),
-      rightWhy: 'Rearranged: ' + lineHTML(L.layoutLine(e)) + '.',
+      rightWhy: 'Yes! With y on its own: ' + lineHTML(L.layoutLine(e)) + '.',
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c) + ' &nbsp;(' + steps + ')',
-      hint: 'Move the x-term to the other side (its sign flips), then divide EVERY term by the number in front of y.',
+      hint: 'Move the x-term to the other side. Its sign flips. Then divide EVERY term by the number in front of y.',
       mount(stage, submit) {
         MathLab.fields(stage, {
           fields: [{ key: 'm', label: 'gradient', long: true }, { key: 'c', label: 'y-intercept', long: true }],
@@ -204,22 +204,22 @@ MathLab.app('line-lab', {
             const empty = Object.keys(v).filter((key) => !v[key]);
             if (empty.length) {
               note('unfinished', { what: 'one of gradient/intercept' });
-              return { ok: false, why: 'Fill in both.', wrong: empty };
+              return { ok: false, why: 'Fill in both boxes.', wrong: empty };
             }
             const gm = L.parseNumber(v.m), gc = L.parseNumber(v.c);
-            if (!gm || !gc) return { ok: false, why: 'Use a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
+            if (!gm || !gc) return { ok: false, why: 'Type a number like −2, 3/4 or 1.5.', wrong: [!gm ? 'm' : 'c'] };
             const okM = eq(gm, m), okC = eq(gc, c);
             if (okM && okC) { submit(true); return { ok: true, right: ['m', 'c'] }; }
             const why = [];
             if (!okM) {
               let d;
-              if (eq(gm, neg(a)) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'You moved the x-term — now divide by ' + qText(b) + ' as well.' };
+              if (eq(gm, neg(a)) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'You moved the x-term. Now divide by ' + qText(b) + ' as well.' };
               else d = diagnoseGradient(gm, m, c, a);
               note('trap', { trap: d.trap }); why.push(d.why);
             }
             if (!okC) {
               let d;
-              if (eq(gc, k) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'Divide the number by ' + qText(b) + ' too — every term.' };
+              if (eq(gc, k) && !eq(b, 1)) d = { trap: 'forgot-divide', why: 'Divide the number on its own by ' + qText(b) + ' too. Every term gets divided.' };
               else d = diagnoseIntercept(gc, m, c);
               note('trap', { trap: d.trap }); why.push(d.why);
             }
@@ -241,14 +241,14 @@ MathLab.app('line-lab', {
   function drawRound(target, prompt) {
     const { e, m, c, label } = target;
     return {
-      prompt: prompt || 'Tap two points on this line. (Drag to adjust before you let go.)',
+      prompt: prompt || 'Tap two points on this line. You can drag a point before you let go.',
       question: label,
       solution: label,
       explain: () => explainDraw(e, m, c),
-      rightWhy: 'Both your points make the equation true — so the line through them is this line.',
+      rightWhy: 'Both your points make the equation true. So your line is this line.',
       noHint: false,
       hint: m === null ? 'Every point on this line has the same ' + (isZero(L.coef(e, 'y')) ? 'x' : 'y') + '.'
-        : 'Start where it crosses the y-axis: (0, ' + qText(c) + '). Then the gradient ' + qText(m) + ' says how far up for each step across.',
+        : 'Start at the y-intercept (where it crosses the y-axis): (0, ' + qText(c) + '). Then use the gradient ' + qText(m) + '. It tells you how far up for each step across.',
       mount(stage, submit) {
         const grid = Grid.create(stage, {});
         const pick2 = Grid.picker(grid, { max: 2, line: true });
@@ -265,7 +265,7 @@ MathLab.app('line-lab', {
           if (pts.length < 2) {
             note('unfinished', { what: 'one point' });
             why.className = 'why-line bad';
-            why.innerHTML = 'Two points make a line — tap one more.';
+            why.innerHTML = 'You need two points for a line. Tap one more.';
             return;
           }
           pick2.stop();
@@ -280,13 +280,13 @@ MathLab.app('line-lab', {
           let d;
           const um = L.gradient(user), uc = L.yIntercept(user);
           const onXAxisC = c && !isZero(c) && pts.some((p) => p.y === 0 && eq(Q(p.x), c));
-          if (m === null || isZero(L.coef(e, 'y'))) d = { trap: 'vertical-line', why: label.replace(/<[^>]+>/g, '') + ' is vertical: every point has the same x.' };
-          else if (isZero(m) && (um === null || !isZero(um))) d = { trap: 'flat-gradient', why: 'There is no x in it, so it is flat: every point has the same y.' };
-          else if (onXAxisC) d = { trap: 'intercept-x-axis', why: 'You put ' + qText(c) + ' on the x-axis. The y-intercept sits on the y-axis: (0, ' + qText(c) + ').' };
+          if (m === null || isZero(L.coef(e, 'y'))) d = { trap: 'vertical-line', why: label.replace(/<[^>]+>/g, '') + ' is vertical. Every point on it has the same x.' };
+          else if (isZero(m) && (um === null || !isZero(um))) d = { trap: 'flat-gradient', why: 'There is no x in it, so the line is flat. Every point has the same y.' };
+          else if (onXAxisC) d = { trap: 'intercept-x-axis', why: 'You put ' + qText(c) + ' on the x-axis. The y-intercept sits on the y-axis, at (0, ' + qText(c) + ').' };
           else if (um && eq(um, neg(m)) && !isZero(m)) d = { trap: 'gradient-sign', why: 'Your line slopes the wrong way. Gradient ' + qText(m) + (m.n < 0 ? ' goes DOWN' : ' goes UP') + ' from left to right.' };
-          else if (um && eq(um, m)) d = { trap: 'intercept-wrong', why: 'Right steepness! But it must cross the y-axis at (0, ' + qText(c) + ').' };
-          else if (uc && eq(uc, c)) d = { trap: 'gradient-wrong', why: 'Right start at (0, ' + qText(c) + '). Then for every ' + m.d + ' across, go ' + Math.abs(m.n) + (m.n < 0 ? ' down.' : ' up.') };
-          else d = { trap: 'line-other', why: 'Start at (0, ' + qText(c) + ') on the y-axis, then use the gradient to find the next point.' };
+          else if (um && eq(um, m)) d = { trap: 'intercept-wrong', why: 'You got the steepness right. Now make it cross the y-axis at (0, ' + qText(c) + ').' };
+          else if (uc && eq(uc, c)) d = { trap: 'gradient-wrong', why: 'You started in the right place, (0, ' + qText(c) + '). Then for every ' + m.d + ' across, go ' + Math.abs(m.n) + (m.n < 0 ? ' down.' : ' up.') };
+          else d = { trap: 'line-other', why: 'Start at (0, ' + qText(c) + ') on the y-axis. Then use the gradient to find the next point.' };
           note('trap', { trap: d.trap });
           submit(false, 0, d.why);
         });
@@ -319,9 +319,9 @@ MathLab.app('line-lab', {
       return {
         prompt: 'Tap where this line crosses the x-axis and where it crosses the y-axis.',
         question: lineHTML(L.layoutStd(e, ['x', 'y'])),
-        solution: 'both are (0, 0) — it goes through the origin, so you need one more point to draw it',
-        explain: 'Put y = 0: the x-term must be 0, so x = 0. Put x = 0: y = 0 too. Both intercepts are the origin — the same point — so to draw it you need a second point: pick x = 1 and work out y.',
-        hint: 'Put y = 0 and solve for x. Then put x = 0 and solve for y. Something special happens here.',
+        solution: 'both are (0, 0). The line goes through the origin, so you need one more point to draw it',
+        explain: 'Put y = 0. Then the x-term must be 0, so x = 0. Put x = 0. Then y = 0 too. So both intercepts are the same point: the origin, (0, 0). To draw the line you need a second point. Pick x = 1 and work out y.',
+        hint: 'Put y = 0 and solve for x. Then put x = 0 and solve for y. Look closely at what you get.',
         mount(stage, submit) { originMount(stage, submit, e); },
       };
     }
@@ -333,7 +333,7 @@ MathLab.app('line-lab', {
     return {
       prompt: 'Tap the two points where this line crosses the axes.',
       question: lineHTML(disp),
-      explain: '<ol><li>On the x-axis every point has y = 0. ' + working.split('. Put x = 0')[0] + '.</li><li>On the y-axis every point has x = 0. Put x = 0' + working.split('. Put x = 0')[1] + '</li><li>An intercept always has a 0 in it — it sits ON an axis.</li></ol>',
+      explain: '<ol><li>On the x-axis every point has y = 0. ' + working.split('. Put x = 0')[0] + '.</li><li>On the y-axis every point has x = 0. Put x = 0' + working.split('. Put x = 0')[1] + '</li><li>An intercept sits ON an axis. So it always has a 0 in it.</li></ol>',
       solution: pt(xInt, 0) + ' and ' + pt(0, yInt),
       hint: 'On the x-axis y = 0. On the y-axis x = 0. Put each one in and solve.',
       mount(stage, submit) {
@@ -352,7 +352,7 @@ MathLab.app('line-lab', {
           if (pts.length < 2) {
             note('unfinished', { what: 'one intercept' });
             why.className = 'why-line bad';
-            why.innerHTML = 'A line like this crosses BOTH axes — find the other one too.';
+            why.innerHTML = 'This line crosses BOTH axes. Find the other point too.';
             return;
           }
           pick2.stop();
@@ -369,9 +369,9 @@ MathLab.app('line-lab', {
           want.forEach((w) => grid.point(w.x, w.y, { cls: 'good' }));
           let d;
           if (pts.some((p) => p.x === want[0].x && p.y === want[1].y && p.x !== 0 && p.y !== 0)) {
-            d = { trap: 'intercepts-merged', why: 'You joined the two answers into one point ' + pt(xInt, yInt) + '. An intercept sits ON an axis, so one of its numbers is always 0: ' + pt(xInt, 0) + ' and ' + pt(0, yInt) + '.' };
+            d = { trap: 'intercepts-merged', why: 'You joined the two answers into one point, ' + pt(xInt, yInt) + '. An intercept sits ON an axis, so one of its numbers is always 0. The answers are ' + pt(xInt, 0) + ' and ' + pt(0, yInt) + '.' };
           } else if (pts.some((p) => p.x === want[1].y && p.y === 0) && pts.some((p) => p.x === 0 && p.y === want[0].x)) {
-            d = { trap: 'intercepts-swapped', why: 'Swapped: the x-intercept comes from putting y = 0. ' + working };
+            d = { trap: 'intercepts-swapped', why: 'You swapped them. You get the x-intercept by putting y = 0. ' + working };
           } else if (pts.some((p) => (p.x === -want[0].x && p.y === 0 && p.x !== 0) || (p.x === 0 && p.y === -want[1].y && p.y !== 0))) {
             d = { trap: 'intercept-sign', why: 'Check the sign when you divide. ' + working };
           } else {
@@ -400,18 +400,18 @@ MathLab.app('line-lab', {
       const hasO = pts.some((p) => p.x === 0 && p.y === 0);
       if (pts.length === 1 && hasO) {
         why.className = 'why-line';
-        why.innerHTML = 'Yes — both intercepts are the origin! One point can\'t make a line, so tap one more point on it.';
+        why.innerHTML = 'Yes! Both intercepts are the origin. One point can\'t make a line. Tap one more point on it.';
         return;
       }
       pick2.stop();
       row.querySelector('button').disabled = true;
       if (hasO && onLine.length === 2) {
         grid.line(e, { cls: 'good' });
-        submit(true, undefined, 'Both intercepts are (0, 0), so a second point is needed to draw it.');
+        submit(true, undefined, 'Both intercepts are (0, 0). So you need a second point to draw the line.');
       } else {
         grid.line(e, { cls: 'ghost', dashed: true });
         note('trap', { trap: hasO ? 'origin-second-point' : 'intercept-other' });
-        submit(false, 0, hasO ? 'Right about the origin. Your second point is not on the line — try x = 1.' : 'Put y = 0: x comes out 0 too. The line goes through the origin (0, 0).');
+        submit(false, 0, hasO ? 'You got the origin right. Your second point is not on the line. Try x = 1.' : 'Put y = 0 and x comes out 0 too. So the line goes through the origin (0, 0).');
       }
     });
   }
@@ -422,24 +422,24 @@ MathLab.app('line-lab', {
     if (Math.random() < 0.5) return drawRound(specialTarget(), 'Tap two points on this line.');
     const k = rndNonZero(-6, 6);
     const kinds = [
-      { key: 'v', label: 'Vertical — straight up and down', e: L.vertical(k) },
-      { key: 'h', label: 'Horizontal — flat', e: L.horizontal(k) },
+      { key: 'v', label: 'Vertical (straight up and down)', e: L.vertical(k) },
+      { key: 'h', label: 'Horizontal (flat)', e: L.horizontal(k) },
       { key: 'o', label: 'Slanted, through the origin', e: L.lineMC(pick(SLOPES.whole), 0) },
       { key: 's', label: 'Slanted, not through the origin', e: L.lineMC(pick(SLOPES.whole), k) },
     ];
     const target = pick(kinds);
     const why = {
-      v: 'x = ' + qText(k) + ' means every point has x = ' + qText(k) + ' — whatever y is. That is a vertical line; it has no y = mx + c form.',
-      h: 'y = ' + qText(k) + ' means every point has y = ' + qText(k) + '. Flat: gradient 0.',
-      o: 'No number on its own, so when x = 0, y = 0: it goes through the origin.',
-      s: 'It has an x-term (slanted) and a number on its own (misses the origin).',
+      v: 'x = ' + qText(k) + ' means every point has x = ' + qText(k) + ', whatever y is. That is a vertical line. You can\'t write it as y = mx + c.',
+      h: 'y = ' + qText(k) + ' means every point has y = ' + qText(k) + '. So the line is flat and the gradient is 0.',
+      o: 'There is no number on its own. So when x = 0, y = 0. The line goes through the origin.',
+      s: 'It has an x-term, so it is slanted. It has a number on its own, so it misses the origin.',
     };
     return {
       prompt: 'What kind of line is this?',
       question: lineHTML(L.layoutLine(target.e)),
       solution: target.label,
-      explain: '<ol><li>Only x, no y (x = number): vertical.</li><li>Only y, no x (y = number): horizontal, gradient 0.</li><li>An x-term and no number on its own: slanted, through the origin.</li><li>An x-term and a number on its own: slanted, crossing the y-axis at that number.</li></ol>',
-      hint: 'Ask: which letters are in it? Is there a number on its own?',
+      explain: '<ol><li>Only x, no y (x = number): the line is vertical.</li><li>Only y, no x (y = number): the line is horizontal. Its gradient (how steep it is) is 0.</li><li>An x-term and no number on its own: slanted, through the origin.</li><li>An x-term and a number on its own: slanted. It crosses the y-axis at that number.</li></ol>',
+      hint: 'Which letters are in it? Is there a number on its own?',
       mount(stage, submit) {
         const opts = MathLab.shuffle(kinds.map((kd) => ({
           html: kd.label,
