@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Two Equations · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,8 +16,8 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
-<script src="../shared/linear.js?v=c28d79ac"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/linear.js?v=ee1df055"></script>
 <script>
 MathLab.app('two-equations', {
   emoji: '⚖️',
@@ -44,6 +44,49 @@ MathLab.app('two-equations', {
   function scriptFor(pr, method) {
     if (method === 'sub') return L.substitutionScript(pr.p.eS, pr.p.eO, pr.p.solved, pr.p.free);
     return L.eliminationScript(pr.e1, pr.e2, pr.p.target || pick(['x', 'y']));
+  }
+
+  /** The whole solution, every line with the reason it is allowed — the "How it works" panel. */
+  function explainScript(pr, script, steps) {
+    const lines = steps.filter((st) => st.kind !== 'pick').map((st) =>
+      '<li><span class="m">' + st.writtenHTML + '</span><br>' + (st.because || '') + '</li>');
+    const pickStep = steps.find((st) => st.kind === 'pick');
+    const intro = script.method === 'substitution'
+      ? 'Substitution: one equation already says what one letter equals, so put that into the other.'
+      : 'Elimination: make one letter\'s terms the same size, then ' + (pickStep ? 'add or subtract the equations so that letter disappears.' : 'combine the equations so it disappears.');
+    return intro + '<ol>' + lines.join('') + '<li>Check in both: <div class="checks">' +
+      L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div></li></ol>';
+  }
+
+  function workedRound() {
+    const kind = pick(['sub', 'elim']);
+    const pr = problem(kind);
+    const script = scriptFor(pr, kind === 'sub' ? 'sub' : 'elim');
+    const steps = script.steps.map(L.present).filter((st) => st.kind !== 'pick' || true);
+    return {
+      noScore: true,
+      noHint: true,
+      prompt: '📖 Watch one being solved — tap for each step.',
+      question: '',
+      mount(stage, submit) {
+        stage.innerHTML = '<div class="eqs"><div class="eqn a"><span class="tag">①</span>' + pr.show1 + '</div><div class="eqn b"><span class="tag">②</span>' + pr.show2 + '</div></div>';
+        const items = steps.map((st) => {
+          if (st.kind === 'pick') {
+            const right = st.options.find((o) => o.ok);
+            return { html: right.label, because: right.because || right.why };
+          }
+          return { html: (st.tag ? '<span class="kind-blurb">' + st.tag + '</span>' : '') + st.writtenHTML, because: st.because };
+        });
+        items.push({ html: 'x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y), because: 'Both values — that is the answer. Check it:<div class="checks">' +
+          L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div>' });
+        MathLab.worked(stage, {
+          title: script.method === 'substitution' ? 'Substitution' : 'Elimination',
+          steps: items,
+          tryLevel: kind === 'sub' ? 1 : 2,
+        });
+        submit(true);
+      },
+    };
   }
 
   function makeRound(mode) {
@@ -94,6 +137,7 @@ MathLab.app('two-equations', {
         function begin(method) {
           script = scriptFor(pr, method);
           steps = script.steps.map(L.present);
+          round.explain = () => explainScript(pr, script, steps);
           i = 0;
           next();
         }
@@ -132,11 +176,11 @@ MathLab.app('two-equations', {
                     ok = match(1) || match(-1);
                   }
                 }
-                if (ok) { setTimeout(done, 450); return { ok: true, why: 'Yes — ' + st.writtenHTML, right: ['a'] }; }
+                if (ok) return { ok: true, why: 'Yes. ' + (st.because || ''), right: ['a'], next: done };
                 tries++; misses++;
                 note('trap', { trap: 'typed-' + st.kind });
                 const hintTrap = st.options.find((o) => !o.ok && o.why);
-                if (tries >= 2) { setTimeout(done, 1600); return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML, wrong: ['a'] }; }
+                if (tries >= 2) return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML + '<br>' + (st.because || ''), wrong: ['a'], next: done };
                 return { ok: false, why: 'Not that. ' + (hintTrap ? 'Watch out: ' + hintTrap.why : 'Check each term.'), wrong: ['a'] };
               },
             });
@@ -190,7 +234,7 @@ MathLab.app('two-equations', {
                 }
                 return { ok: false, why: 'Check it in both: <div class="checks">' + L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
               }
-              setTimeout(() => settle(pair), 300);
+              settle(pair);
               return { ok: true, right: ['x', 'y'] };
             },
           });
@@ -231,6 +275,7 @@ MathLab.app('two-equations', {
   }
 
   return [
+    { name: '📖 Worked example', make: workedRound },
     { name: '① Substitution', make: () => makeRound('sub') },
     { name: '② Elimination', make: () => makeRound('elim') },
     { name: 'Mixed', make: () => makeRound('mixed') },

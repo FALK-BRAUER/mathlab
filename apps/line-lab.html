@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Line Lab · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,8 +16,8 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
-<script src="../shared/linear.js?v=c28d79ac"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/linear.js?v=ee1df055"></script>
 <script src="../shared/grid.js?v=16d8f245"></script>
 <script>
 MathLab.app('line-lab', {
@@ -55,6 +55,81 @@ MathLab.app('line-lab', {
     return { trap: 'intercept-other', why: 'Put x = 0: what is y? That is where it crosses the y-axis.' };
   }
 
+  /* ---------------- explanations, with this question's own numbers ---------------- */
+
+  const M = (h) => '<span class="m">' + h + '</span>';
+
+  /** How to read m and c off a line already in y = … form. */
+  function explainRead(e, m, c, shownHTML) {
+    const std = lineHTML(L.layoutLine(e));
+    const steps = [];
+    if (isZero(m)) steps.push('There is no x-term at all: y is the same everywhere. Flat line, gradient <b>0</b>.');
+    else steps.push('Line it up with ' + M('y = <i class="var">m</i>x + <i class="var">c</i>') + (shownHTML !== std ? ': ' + M(shownHTML) + ' is the same as ' + M(std) : ': ' + M(std)) + '.');
+    if (eq(L.abs(m), 1)) steps.push(M(m.n < 0 ? '−x' : 'x') + ' means ' + M(qText(m) + ' × x') + ', so the gradient is <b>' + qHTML(m) + '</b> — not 0.');
+    else if (!isZero(m)) steps.push('The number multiplying x is the gradient: <b>' + qHTML(m) + '</b>' + (m.d > 1 ? ' — up ' + m.n + ' for every ' + m.d + ' across' : '') + '.');
+    steps.push(isZero(c) ? 'No number on its own, so it crosses the y-axis at <b>0</b> (through the origin).'
+      : 'The number on its own is where it crosses the y-axis: <b>' + qHTML(c) + '</b>, the point ' + M(pt(0, c)) + '. Check: put x = 0 and y = ' + qText(c) + '.');
+    return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+  }
+
+  /** Rearranging a·x + b·y = k into y = mx + c, every line shown. */
+  function explainRearrange(e, shownHTML) {
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    const steps = ['Start: ' + M(shownHTML)];
+    steps.push('Keep the y-term on the left, move the rest across (each sign flips): ' + M(lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] })));
+    if (!eq(b, 1)) steps.push('Divide EVERY term by ' + qHTML(b) + ': ' + M(lineHTML(L.layoutLine(e))));
+    steps.push('Now read it: gradient ' + M(qHTML(L.gradient(e))) + ', y-intercept ' + M(qHTML(L.yIntercept(e))) + '.');
+    return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+  }
+
+  /** Drawing from y = mx + c: start on the y-axis, then step with the gradient. */
+  function explainDraw(e, m, c) {
+    if (m === null) {
+      const k = L.div(e.k, L.coef(e, 'x'));
+      return 'Every point on ' + M(lineHTML(L.layoutLine(e))) + ' has x = ' + qText(k) + ', whatever y is: ' + M(pt(k, 0)) + ', ' + M(pt(k, 1)) + ', ' + M(pt(k, 2)) + ' … That is a straight up-and-down line through x = ' + qText(k) + '.';
+    }
+    if (isZero(m)) return 'Every point has y = ' + qText(c) + ': ' + M(pt(0, c)) + ', ' + M(pt(1, c)) + ' … a flat line at height ' + qText(c) + '.';
+    const run = m.d, rise = m.n;
+    const p2 = { x: Q(run), y: L.add(c, rise) };
+    return '<ol><li>Start where it crosses the y-axis: ' + M(pt(0, c)) + '.</li>' +
+      '<li>Gradient ' + M(qHTML(m)) + ' = ' + (rise < 0 ? 'down ' + -rise : 'up ' + rise) + ' for every ' + run + ' across' + (run === 1 ? '' : ' (the bottom of the fraction is the steps across)') + '.</li>' +
+      '<li>From ' + M(pt(0, c)) + ' go ' + run + ' right and ' + (rise < 0 ? -rise + ' down' : rise + ' up') + ': ' + M(pt(p2.x, p2.y)) + '.</li>' +
+      '<li>Join the two points and extend the line both ways.</li></ol>';
+  }
+
+  /* ---------------- 📖 worked example ---------------- */
+
+  function workedRound() {
+    const { eq: e0 } = L.mcLine({ frac: Math.random() < 0.5, cRange: 4 });
+    const e = L.normal(e0);
+    const m = L.gradient(e), c = L.yIntercept(e);
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    const shown = lineHTML(L.layoutStd(e, ['x', 'y']));
+    const xi = L.xIntercept(e);
+    return {
+      noScore: true,
+      noHint: true,
+      prompt: '📖 Watch one line go from equation to graph — tap for each step.',
+      question: shown,
+      mount(stage, submit) {
+        const steps = [
+          { html: lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] }), because: 'Get y on its own: move the x-term across, and its sign flips.' },
+          ...(eq(b, 1) ? [] : [{ html: lineHTML(L.layoutLine(e)), because: 'Divide every term by ' + qText(b) + '.' }]),
+          { html: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c), because: 'In y = mx + c: the number with x is the gradient, the number on its own is where it crosses the y-axis.' },
+          { html: 'start at ' + pt(0, c), because: 'The y-intercept is a point ON the y-axis: x is 0 there.' },
+          { html: 'next point ' + pt(Q(m.d), L.add(c, m.n)), because: 'Gradient ' + qText(m) + ': ' + (m.n < 0 ? 'down ' + -m.n : 'up ' + m.n) + ' for every ' + m.d + ' across.' },
+          ...(xi && L.isInt(xi) && !isZero(xi) ? [{ html: 'check: crosses the x-axis at ' + pt(xi, 0), because: 'Put y = 0 in ' + shown.replace(/<[^>]+>/g, '') + ' and solve for x — it should be on your line.' }] : []),
+          { html: 'join and extend', because: 'Two points make the line. A third (like the x-intercept) catches mistakes.' },
+        ];
+        MathLab.worked(stage, { steps, tryLevel: 1, onDone() {} });
+        const grid = Grid.create(stage, {});
+        grid.line(e, { cls: 'a', label: 'the line' });
+        grid.point(0, L.num(c), { cls: 'given', label: pt(0, c) });
+        submit(true);
+      },
+    };
+  }
+
   /* ---------------- ① read it ---------------- */
 
   function readRound(frac) {
@@ -73,6 +148,8 @@ MathLab.app('line-lab', {
       prompt: 'What are the gradient and the y-intercept?',
       question: shown,
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c),
+      explain: () => explainRead(e, m, c, shown),
+      rightWhy: 'Gradient ' + qHTML(m) + ' (the number with x), y-intercept ' + qHTML(c) + ' (the number on its own).',
       hint: 'Line it up with y = <i class="var">m</i>x + <i class="var">c</i>. The number with x is the gradient; the number on its own is where it crosses the y-axis.',
       mount(stage, submit) {
         MathLab.fields(stage, {
@@ -116,6 +193,8 @@ MathLab.app('line-lab', {
     return {
       prompt: 'Get <i class="var">y</i> on its own first. Gradient and y-intercept?',
       question: lineHTML(disp),
+      explain: () => explainRearrange(e, lineHTML(disp)),
+      rightWhy: 'Rearranged: ' + lineHTML(L.layoutLine(e)) + '.',
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c) + ' &nbsp;(' + steps + ')',
       hint: 'Move the x-term to the other side (its sign flips), then divide EVERY term by the number in front of y.',
       mount(stage, submit) {
@@ -165,6 +244,8 @@ MathLab.app('line-lab', {
       prompt: prompt || 'Tap two points on this line. (Drag to adjust before you let go.)',
       question: label,
       solution: label,
+      explain: () => explainDraw(e, m, c),
+      rightWhy: 'Both your points make the equation true — so the line through them is this line.',
       noHint: false,
       hint: m === null ? 'Every point on this line has the same ' + (isZero(L.coef(e, 'y')) ? 'x' : 'y') + '.'
         : 'Start where it crosses the y-axis: (0, ' + qText(c) + '). Then the gradient ' + qText(m) + ' says how far up for each step across.',
@@ -239,6 +320,7 @@ MathLab.app('line-lab', {
         prompt: 'Tap where this line crosses the x-axis and where it crosses the y-axis.',
         question: lineHTML(L.layoutStd(e, ['x', 'y'])),
         solution: 'both are (0, 0) — it goes through the origin, so you need one more point to draw it',
+        explain: 'Put y = 0: the x-term must be 0, so x = 0. Put x = 0: y = 0 too. Both intercepts are the origin — the same point — so to draw it you need a second point: pick x = 1 and work out y.',
         hint: 'Put y = 0 and solve for x. Then put x = 0 and solve for y. Something special happens here.',
         mount(stage, submit) { originMount(stage, submit, e); },
       };
@@ -251,6 +333,7 @@ MathLab.app('line-lab', {
     return {
       prompt: 'Tap the two points where this line crosses the axes.',
       question: lineHTML(disp),
+      explain: '<ol><li>On the x-axis every point has y = 0. ' + working.split('. Put x = 0')[0] + '.</li><li>On the y-axis every point has x = 0. Put x = 0' + working.split('. Put x = 0')[1] + '</li><li>An intercept always has a 0 in it — it sits ON an axis.</li></ol>',
       solution: pt(xInt, 0) + ' and ' + pt(0, yInt),
       hint: 'On the x-axis y = 0. On the y-axis x = 0. Put each one in and solve.',
       mount(stage, submit) {
@@ -355,6 +438,7 @@ MathLab.app('line-lab', {
       prompt: 'What kind of line is this?',
       question: lineHTML(L.layoutLine(target.e)),
       solution: target.label,
+      explain: '<ol><li>Only x, no y (x = number): vertical.</li><li>Only y, no x (y = number): horizontal, gradient 0.</li><li>An x-term and no number on its own: slanted, through the origin.</li><li>An x-term and a number on its own: slanted, crossing the y-axis at that number.</li></ol>',
       hint: 'Ask: which letters are in it? Is there a number on its own?',
       mount(stage, submit) {
         const opts = MathLab.shuffle(kinds.map((kd) => ({
@@ -382,6 +466,7 @@ MathLab.app('line-lab', {
   const SPICY = [() => readRound(true), () => rearrangeRound(true), () => drawRound(mcTarget(true))];
 
   return [
+    { name: '📖 Worked example', make: workedRound },
     { name: '① Read it', make: () => readRound(false) },
     { name: '② Rearrange first', make: () => rearrangeRound(false) },
     { name: '③ Draw it', make: () => drawRound(mcTarget(Math.random() < 0.3)) },

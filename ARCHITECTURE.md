@@ -63,6 +63,14 @@ a learner whose main error is signs.
 in the evidence). Each named error is logged as a trap id; the daily mix's report turns the
 log into a list for a parent. The log stays in `localStorage` on the device.
 
+**Every answer explains itself, and nothing moves on by itself.** A right pick shows why it is
+right and waits for "Continue"; a wrong one names the mistake. After every question the
+feedback carries a "How it works" panel — that question worked through with its own
+numbers — open after a miss, one tap away after a hit (`round.explain`, `round.rightWhy`).
+`check-linear.mjs` fails if any step or story equation lacks its reason. Each chapter app
+opens on a **📖 Worked example** level (revealed one step at a time), then ① ② ③, then
+Mixed; five right in a row offers the next level. The hub states the learning path.
+
 **Finishing is a rule, not a hope.** Rounds in the equations chapter end only when the
 question actually asked is answered — both x and y, every derived quantity, the "hence" part.
 Submitting with a part missing is refused with a reason and logged as `unfinished`.
@@ -80,7 +88,8 @@ A level's `make()` returns:
 | `solution` | Displayed after a wrong answer |
 | `mount(stage, submit)` | Render the answer UI; call `submit(bool)` once |
 
-Optional: `noHint` (hide the hint button), `noScore` (a summary screen — no score, no log),
+Optional: `explain` (HTML or `(correct) => HTML`, the "How it works" panel), `rightWhy` /
+`wrongWhy` (one line when the app passes no `why`), `noHint` (hide the hint button), `noScore` (a summary screen — no score, no log),
 `origin` (the daily mix says which app a round came from), `firstTry` (set by multi-step
 rounds so the log knows a finished round had mistakes on the way).
 

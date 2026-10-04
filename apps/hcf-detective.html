@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HCF Detective · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,7 +16,7 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
 <script>
 MathLab.app('hcf-detective', {
   emoji: '🔍',
@@ -140,6 +140,11 @@ MathLab.app('hcf-detective', {
       question: mathHTML(label(a)) + '<span class="hcf-and">and</span>' + mathHTML(label(b)),
       hint: note + ' If nothing is shared, the highest common factor is just 1.',
       solution: asTerm(want),
+      rightWhy: 'Exactly the pieces in both terms, multiplied together.',
+      explain: '<ol><li>Break the first term into pieces: ' + pa.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
+        '<li>Break the second into pieces: ' + pb.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
+        '<li>Keep only pieces that appear in BOTH (as many times as the fewer one has): ' + (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'none') + '.</li>' +
+        '<li>Multiply them: HCF = <b>' + mathHTML(asTerm(want)) + '</b>.</li></ol>',
 
       mount(stage, submit) {
         const chosen = [];

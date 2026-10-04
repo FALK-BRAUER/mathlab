@@ -36,6 +36,81 @@ MathLab.app('line-lab', {
     return { trap: 'intercept-other', why: 'Put x = 0: what is y? That is where it crosses the y-axis.' };
   }
 
+  /* ---------------- explanations, with this question's own numbers ---------------- */
+
+  const M = (h) => '<span class="m">' + h + '</span>';
+
+  /** How to read m and c off a line already in y = … form. */
+  function explainRead(e, m, c, shownHTML) {
+    const std = lineHTML(L.layoutLine(e));
+    const steps = [];
+    if (isZero(m)) steps.push('There is no x-term at all: y is the same everywhere. Flat line, gradient <b>0</b>.');
+    else steps.push('Line it up with ' + M('y = <i class="var">m</i>x + <i class="var">c</i>') + (shownHTML !== std ? ': ' + M(shownHTML) + ' is the same as ' + M(std) : ': ' + M(std)) + '.');
+    if (eq(L.abs(m), 1)) steps.push(M(m.n < 0 ? '−x' : 'x') + ' means ' + M(qText(m) + ' × x') + ', so the gradient is <b>' + qHTML(m) + '</b> — not 0.');
+    else if (!isZero(m)) steps.push('The number multiplying x is the gradient: <b>' + qHTML(m) + '</b>' + (m.d > 1 ? ' — up ' + m.n + ' for every ' + m.d + ' across' : '') + '.');
+    steps.push(isZero(c) ? 'No number on its own, so it crosses the y-axis at <b>0</b> (through the origin).'
+      : 'The number on its own is where it crosses the y-axis: <b>' + qHTML(c) + '</b>, the point ' + M(pt(0, c)) + '. Check: put x = 0 and y = ' + qText(c) + '.');
+    return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+  }
+
+  /** Rearranging a·x + b·y = k into y = mx + c, every line shown. */
+  function explainRearrange(e, shownHTML) {
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    const steps = ['Start: ' + M(shownHTML)];
+    steps.push('Keep the y-term on the left, move the rest across (each sign flips): ' + M(lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] })));
+    if (!eq(b, 1)) steps.push('Divide EVERY term by ' + qHTML(b) + ': ' + M(lineHTML(L.layoutLine(e))));
+    steps.push('Now read it: gradient ' + M(qHTML(L.gradient(e))) + ', y-intercept ' + M(qHTML(L.yIntercept(e))) + '.');
+    return '<ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+  }
+
+  /** Drawing from y = mx + c: start on the y-axis, then step with the gradient. */
+  function explainDraw(e, m, c) {
+    if (m === null) {
+      const k = L.div(e.k, L.coef(e, 'x'));
+      return 'Every point on ' + M(lineHTML(L.layoutLine(e))) + ' has x = ' + qText(k) + ', whatever y is: ' + M(pt(k, 0)) + ', ' + M(pt(k, 1)) + ', ' + M(pt(k, 2)) + ' … That is a straight up-and-down line through x = ' + qText(k) + '.';
+    }
+    if (isZero(m)) return 'Every point has y = ' + qText(c) + ': ' + M(pt(0, c)) + ', ' + M(pt(1, c)) + ' … a flat line at height ' + qText(c) + '.';
+    const run = m.d, rise = m.n;
+    const p2 = { x: Q(run), y: L.add(c, rise) };
+    return '<ol><li>Start where it crosses the y-axis: ' + M(pt(0, c)) + '.</li>' +
+      '<li>Gradient ' + M(qHTML(m)) + ' = ' + (rise < 0 ? 'down ' + -rise : 'up ' + rise) + ' for every ' + run + ' across' + (run === 1 ? '' : ' (the bottom of the fraction is the steps across)') + '.</li>' +
+      '<li>From ' + M(pt(0, c)) + ' go ' + run + ' right and ' + (rise < 0 ? -rise + ' down' : rise + ' up') + ': ' + M(pt(p2.x, p2.y)) + '.</li>' +
+      '<li>Join the two points and extend the line both ways.</li></ol>';
+  }
+
+  /* ---------------- 📖 worked example ---------------- */
+
+  function workedRound() {
+    const { eq: e0 } = L.mcLine({ frac: Math.random() < 0.5, cRange: 4 });
+    const e = L.normal(e0);
+    const m = L.gradient(e), c = L.yIntercept(e);
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    const shown = lineHTML(L.layoutStd(e, ['x', 'y']));
+    const xi = L.xIntercept(e);
+    return {
+      noScore: true,
+      noHint: true,
+      prompt: '📖 Watch one line go from equation to graph — tap for each step.',
+      question: shown,
+      mount(stage, submit) {
+        const steps = [
+          { html: lineHTML({ L: [L.T(b, 'y')], R: [L.T(neg(a), 'x'), L.T(e.k)] }), because: 'Get y on its own: move the x-term across, and its sign flips.' },
+          ...(eq(b, 1) ? [] : [{ html: lineHTML(L.layoutLine(e)), because: 'Divide every term by ' + qText(b) + '.' }]),
+          { html: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c), because: 'In y = mx + c: the number with x is the gradient, the number on its own is where it crosses the y-axis.' },
+          { html: 'start at ' + pt(0, c), because: 'The y-intercept is a point ON the y-axis: x is 0 there.' },
+          { html: 'next point ' + pt(Q(m.d), L.add(c, m.n)), because: 'Gradient ' + qText(m) + ': ' + (m.n < 0 ? 'down ' + -m.n : 'up ' + m.n) + ' for every ' + m.d + ' across.' },
+          ...(xi && L.isInt(xi) && !isZero(xi) ? [{ html: 'check: crosses the x-axis at ' + pt(xi, 0), because: 'Put y = 0 in ' + shown.replace(/<[^>]+>/g, '') + ' and solve for x — it should be on your line.' }] : []),
+          { html: 'join and extend', because: 'Two points make the line. A third (like the x-intercept) catches mistakes.' },
+        ];
+        MathLab.worked(stage, { steps, tryLevel: 1, onDone() {} });
+        const grid = Grid.create(stage, {});
+        grid.line(e, { cls: 'a', label: 'the line' });
+        grid.point(0, L.num(c), { cls: 'given', label: pt(0, c) });
+        submit(true);
+      },
+    };
+  }
+
   /* ---------------- ① read it ---------------- */
 
   function readRound(frac) {
@@ -54,6 +129,8 @@ MathLab.app('line-lab', {
       prompt: 'What are the gradient and the y-intercept?',
       question: shown,
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c),
+      explain: () => explainRead(e, m, c, shown),
+      rightWhy: 'Gradient ' + qHTML(m) + ' (the number with x), y-intercept ' + qHTML(c) + ' (the number on its own).',
       hint: 'Line it up with y = <i class="var">m</i>x + <i class="var">c</i>. The number with x is the gradient; the number on its own is where it crosses the y-axis.',
       mount(stage, submit) {
         MathLab.fields(stage, {
@@ -97,6 +174,8 @@ MathLab.app('line-lab', {
     return {
       prompt: 'Get <i class="var">y</i> on its own first. Gradient and y-intercept?',
       question: lineHTML(disp),
+      explain: () => explainRearrange(e, lineHTML(disp)),
+      rightWhy: 'Rearranged: ' + lineHTML(L.layoutLine(e)) + '.',
       solution: 'gradient ' + qHTML(m) + ', y-intercept ' + qHTML(c) + ' &nbsp;(' + steps + ')',
       hint: 'Move the x-term to the other side (its sign flips), then divide EVERY term by the number in front of y.',
       mount(stage, submit) {
@@ -146,6 +225,8 @@ MathLab.app('line-lab', {
       prompt: prompt || 'Tap two points on this line. (Drag to adjust before you let go.)',
       question: label,
       solution: label,
+      explain: () => explainDraw(e, m, c),
+      rightWhy: 'Both your points make the equation true — so the line through them is this line.',
       noHint: false,
       hint: m === null ? 'Every point on this line has the same ' + (isZero(L.coef(e, 'y')) ? 'x' : 'y') + '.'
         : 'Start where it crosses the y-axis: (0, ' + qText(c) + '). Then the gradient ' + qText(m) + ' says how far up for each step across.',
@@ -220,6 +301,7 @@ MathLab.app('line-lab', {
         prompt: 'Tap where this line crosses the x-axis and where it crosses the y-axis.',
         question: lineHTML(L.layoutStd(e, ['x', 'y'])),
         solution: 'both are (0, 0) — it goes through the origin, so you need one more point to draw it',
+        explain: 'Put y = 0: the x-term must be 0, so x = 0. Put x = 0: y = 0 too. Both intercepts are the origin — the same point — so to draw it you need a second point: pick x = 1 and work out y.',
         hint: 'Put y = 0 and solve for x. Then put x = 0 and solve for y. Something special happens here.',
         mount(stage, submit) { originMount(stage, submit, e); },
       };
@@ -232,6 +314,7 @@ MathLab.app('line-lab', {
     return {
       prompt: 'Tap the two points where this line crosses the axes.',
       question: lineHTML(disp),
+      explain: '<ol><li>On the x-axis every point has y = 0. ' + working.split('. Put x = 0')[0] + '.</li><li>On the y-axis every point has x = 0. Put x = 0' + working.split('. Put x = 0')[1] + '</li><li>An intercept always has a 0 in it — it sits ON an axis.</li></ol>',
       solution: pt(xInt, 0) + ' and ' + pt(0, yInt),
       hint: 'On the x-axis y = 0. On the y-axis x = 0. Put each one in and solve.',
       mount(stage, submit) {
@@ -336,6 +419,7 @@ MathLab.app('line-lab', {
       prompt: 'What kind of line is this?',
       question: lineHTML(L.layoutLine(target.e)),
       solution: target.label,
+      explain: '<ol><li>Only x, no y (x = number): vertical.</li><li>Only y, no x (y = number): horizontal, gradient 0.</li><li>An x-term and no number on its own: slanted, through the origin.</li><li>An x-term and a number on its own: slanted, crossing the y-axis at that number.</li></ol>',
       hint: 'Ask: which letters are in it? Is there a number on its own?',
       mount(stage, submit) {
         const opts = MathLab.shuffle(kinds.map((kd) => ({
@@ -363,6 +447,7 @@ MathLab.app('line-lab', {
   const SPICY = [() => readRound(true), () => rearrangeRound(true), () => drawRound(mcTarget(true))];
 
   return [
+    { name: '📖 Worked example', make: workedRound },
     { name: '① Read it', make: () => readRound(false) },
     { name: '② Rearrange first', make: () => rearrangeRound(false) },
     { name: '③ Draw it', make: () => drawRound(mcTarget(Math.random() < 0.3)) },
@@ -437,7 +522,151 @@ MathLab.app('crossing', {
     return { trap: 'crossing-other', why: 'Follow both lines to where they meet.' };
   }
 
-  /* ---------------- ① find the crossing ---------------- */
+  const ptQ = (x, y) => '(' + qText(x) + ', ' + qText(y) + ')';
+  const lineHTML = (d) => L.dispHTML(d);
+
+  /** Working for "where does this line cross the y-axis / x-axis" — with this line's numbers. */
+  function axisWork(e, axis) {
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    if (axis === 'y') {
+      const v = L.yIntercept(e);
+      return 'Put x = 0: ' + lineHTML({ L: [L.T(b, 'y')], R: [L.T(e.k)] }) + ', so y = ' + L.qHTML(v) + ' → ' + ptQ(0, v);
+    }
+    const v = L.xIntercept(e);
+    return 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + ', so x = ' + L.qHTML(v) + ' → ' + ptQ(v, 0);
+  }
+
+  const EXPLAIN_CROSS = '<ol><li>Each line is every point that makes its equation true.</li>' +
+    '<li>The crossing is the one point on BOTH lines — so it makes BOTH equations true. That pair is the solution.</li>' +
+    '<li>An intercept is different: where ONE line meets an axis. It always has a 0 in it.</li>' +
+    '<li>Always check the crossing in both equations.</li></ol>';
+
+  /* ---------------- ① step by step: build both lines, then cross ---------------- */
+
+  function guidedRound() {
+    const { e1, e2, sol } = L.graphPair({});
+    const m1 = L.gradient(e1), c1 = L.yIntercept(e1);
+    const B = L.scale(L.normal(e2), pick([1, -1]));
+    const xiB = L.xIntercept(e2);
+    const useXInt = xiB && L.isInt(xiB) && Math.abs(xiB.n) <= 6 && !L.isZero(xiB);
+    const a = lineHTML(L.layoutLine(e1)), b = lineHTML(L.layoutStd(B, ORDER));
+
+    const phases = [
+      { line: 0, ask: 'Line A: ' + a + '. Where does it cross the <b>y-axis</b>? Tap that point.',
+        ok: (p) => p.x === 0 && eq(Q(p.y), c1),
+        because: 'In y = mx + c the number on its own, ' + qText(c1) + ', is where it crosses the y-axis: ' + ptQ(0, c1) + '.',
+        wrong: (p) => (p.y === 0 && eq(Q(p.x), c1) ? { trap: 'intercept-x-axis', why: 'That is on the x-axis. The y-intercept sits on the y-axis, where x = 0: ' + ptQ(0, c1) + '.' }
+          : p.x === 0 && eq(Q(p.y), L.neg(c1)) ? { trap: 'intercept-sign', why: 'Check the sign: c is ' + qText(c1) + '.' }
+          : { trap: 'intercept-other', why: 'On the y-axis x = 0. Put x = 0 into y = mx + c: y = c = ' + qText(c1) + '.' }) },
+      { line: 0, ask: 'Now use the gradient ' + L.qHTML(m1) + ': from ' + ptQ(0, c1) + ' go ' + m1.d + ' right and ' + (m1.n < 0 ? -m1.n + ' down' : m1.n + ' up') + '. Tap that point.',
+        ok: (p) => L.satisfies(e1, { x: Q(p.x), y: Q(p.y) }) && !(p.x === 0),
+        because: 'Gradient ' + qText(m1) + ' = ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + ' for every ' + m1.d + ' across, so ' + ptQ(m1.d, L.add(c1, m1.n)) + ' is on the line too.',
+        wrong: (p) => (L.satisfies(e1, { x: Q(p.x), y: Q(-p.y + 2 * L.num(c1)) }) ? { trap: 'gradient-sign', why: 'Wrong direction: ' + (m1.n < 0 ? 'a negative gradient goes DOWN as you go right.' : 'a positive gradient goes UP as you go right.') }
+          : { trap: 'gradient-wrong', why: 'Across first (' + m1.d + '), then ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + '. Count the squares from ' + ptQ(0, c1) + '.' }) },
+      { line: 1, ask: 'Line B: ' + b + '. Put <b>x = 0</b> — where does it cross the y-axis? Tap it.',
+        ok: (p) => p.x === 0 && eq(Q(p.y), L.yIntercept(e2)),
+        because: axisWork(B, 'y') + '.',
+        wrong: (p) => (p.y === 0 ? { trap: 'intercepts-swapped', why: 'x = 0 is the y-axis (up and down). ' + axisWork(B, 'y') + '.' }
+          : { trap: 'intercept-other', why: axisWork(B, 'y') + '.' }) },
+      useXInt
+        ? { line: 1, ask: 'Put <b>y = 0</b> in line B — where does it cross the x-axis? Tap it.',
+          ok: (p) => p.y === 0 && eq(Q(p.x), xiB),
+          because: axisWork(B, 'x') + '. Two points — line B is drawn.',
+          wrong: (p) => (p.x === 0 ? { trap: 'intercepts-swapped', why: 'y = 0 is the x-axis (left to right). ' + axisWork(B, 'x') + '.' }
+            : L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) ? { trap: 'intercept-other', why: 'That point IS on line B — but the x-intercept has y = 0. ' + axisWork(B, 'x') + '.' }
+            : { trap: 'intercept-sign', why: axisWork(B, 'x') + '.' }) }
+        : { line: 1, ask: 'Find one more point on line B: pick an x, work out y from ' + b + ', and tap it.',
+          ok: (p) => L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) && p.x !== 0,
+          because: 'It makes ' + b + ' true, so it is on line B. Two points — line B is drawn.',
+          wrong: () => ({ trap: 'line-other', why: 'Put your x into ' + b + ' and solve for y. The gradient of B is ' + qText(L.gradient(e2)) + ', which helps.' }) },
+      { line: 2, ask: 'Both lines are drawn. Tap where they <b>cross</b>.',
+        ok: (p) => eq(Q(p.x), sol.x) && eq(Q(p.y), sol.y),
+        because: ptQ(sol.x, sol.y) + ' is on both lines, so it makes both equations true:',
+        wrong: (p) => judgeTap(p, e1, e2, sol) },
+    ];
+
+    return {
+      prompt: 'Build both lines step by step, then find where they cross.',
+      question: '',
+      solution: ptQ(sol.x, sol.y),
+      explain: () => '<ol><li>Line A, ' + a + ': start at the y-intercept ' + ptQ(0, c1) + ', then use the gradient ' + L.qHTML(m1) + ' for a second point.</li>' +
+        '<li>Line B, ' + b + ': ' + axisWork(B, 'y') + (useXInt ? '; ' + axisWork(B, 'x') : '') + '.</li>' +
+        '<li>Where they cross: ' + ptQ(sol.x, sol.y) + '.<div class="checks">' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }).replace(/^<div class="checks">|<\/div>$/g, '') + '</div></li></ol>',
+      mount(stage, submit) {
+        eqsBlock(stage, a, b);
+        // the instruction sits ABOVE the grid: below it, on a phone, it is off-screen
+        const status = addHTML(stage, '<p class="step-prompt"></p>').firstChild;
+        const grid = Grid.create(stage, {});
+        const row = addHTML(stage, '<div class="answer-row"><button type="button">Check</button></div>');
+        const btn = row.querySelector('button');
+        const why = addHTML(stage, '<p class="why-line"> </p>').firstChild;
+        let at = 0, misses = 0, tries = 0, pk = null;
+        const placed = [[], []];
+
+        function start() {
+          const ph = phases[at];
+          status.innerHTML = '<span class="kind-blurb">Step ' + (at + 1) + ' of ' + phases.length + '</span>' + ph.ask;
+          tries = 0;
+          pk = Grid.picker(grid, { max: 1 });
+          btn.hidden = false;
+          btn.disabled = false;
+        }
+
+        function advance(p, ph) {
+          pk.stop(); pk.clear();
+          if (ph.line < 2) {
+            placed[ph.line].push(p);
+            grid.point(p.x, p.y, { cls: ph.line ? 'hot' : 'given', label: '(' + p.x + ', ' + p.y + ')' });
+            if (placed[ph.line].length === 2) grid.line(ph.line ? e2 : e1, { cls: ph.line ? 'b' : 'a', label: ph.line ? 'B' : 'A' });
+          }
+          btn.hidden = true;
+          const cont = addHTML(stage, '<div class="answer-row"><button type="button" class="continue">' + (at === phases.length - 1 ? 'Finish' : 'Continue →') + '</button></div>');
+          cont.querySelector('button').addEventListener('click', () => {
+            cont.remove();
+            why.innerHTML = ' ';
+            at++;
+            if (at < phases.length) { start(); return; }
+            submit(misses === 0, Math.max(6, 20 - 3 * misses), 'All five steps — built from the equations, not guessed.');
+          });
+        }
+
+        btn.addEventListener('click', () => {
+          const [p] = pk.points();
+          const ph = phases[at];
+          if (!p) { why.className = 'why-line bad'; why.innerHTML = 'Tap a point on the grid first.'; return; }
+          if (ph.ok(p)) {
+            why.className = 'why-line good';
+            why.innerHTML = ph.because + (ph.line === 2 ? checks(e1, e2, p) : '');
+            if (ph.line === 2) grid.point(p.x, p.y, { cls: 'good', label: '(' + p.x + ', ' + p.y + ')' });
+            advance(p, ph);
+            return;
+          }
+          misses++; tries++;
+          const w = ph.wrong(p) || { trap: 'crossing-other', why: 'Not that one.' };
+          note('trap', { trap: w.trap });
+          why.className = 'why-line bad';
+          if (tries >= 2) {
+            // show it, explain it, move on — a third blind try teaches nothing
+            const want = ph.line === 2 ? { x: L.num(sol.x), y: L.num(sol.y) }
+              : at === 0 ? { x: 0, y: L.num(c1) }
+              : at === 1 ? { x: m1.d, y: L.num(L.add(c1, m1.n)) }
+              : at === 2 ? { x: 0, y: L.num(L.yIntercept(e2)) }
+              : useXInt ? { x: L.num(xiB), y: 0 } : (() => { for (let x = 1; x <= 6; x++) { const y = L.div(L.sub(e2.k, L.mul(L.coef(e2, 'x'), x)), L.coef(e2, 'y')); if (L.isInt(y) && Math.abs(y.n) <= 6) return { x, y: y.n }; } return { x: 0, y: L.num(L.yIntercept(e2)) }; })();
+            why.innerHTML = w.why + ' It is ' + '(' + want.x + ', ' + want.y + '). ' + ph.because;
+            if (ph.line === 2) grid.point(want.x, want.y, { cls: 'good' });
+            advance(want, ph);
+            return;
+          }
+          why.innerHTML = w.why + ' Try again.';
+          pk.clear();
+        });
+
+        start();
+      },
+    };
+  }
+
+  /* ---------------- spot the crossing (Mixed only) ---------------- */
 
   function findRound() {
     const { e1, e2, sol } = L.graphPair({});
@@ -446,6 +675,7 @@ MathLab.app('crossing', {
       prompt: 'Where do the lines cross? Tap the point.',
       question: '',
       solution: pt(sol),
+      explain: EXPLAIN_CROSS,
       hint: 'Ignore where the lines hit the axes. Look for the one spot where blue and orange touch.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
@@ -480,11 +710,14 @@ MathLab.app('crossing', {
       prompt: 'Draw both lines, then find where they cross.',
       question: '',
       solution: pt(sol),
+      explain: () => '<ol><li>Line A: ' + a + ' — ' + axisWork(e1, 'y') + ', then use the gradient ' + L.qHTML(L.gradient(e1)) + '.</li>' +
+        '<li>Line B: ' + b + ' — ' + axisWork(e2, 'y') + ', then the gradient ' + L.qHTML(L.gradient(e2)) + '.</li>' +
+        '<li>They cross at ' + pt(sol) + ' — check it in both.</li></ol>',
       hint: 'For each line find two points — the intercepts work well — and tap them.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
-        const grid = Grid.create(stage, {});
         const status = addHTML(stage, '<p class="step-prompt"></p>').firstChild;
+        const grid = Grid.create(stage, {});
         const row = addHTML(stage, '<div class="answer-row"><button type="button">Check</button></div>');
         const btn = row.querySelector('button');
         const why = addHTML(stage, '<p class="why-line"> </p>').firstChild;
@@ -567,6 +800,9 @@ MathLab.app('crossing', {
     return {
       prompt: 'What is the orange point?',
       question: '',
+      explain: '<ol><li><b>Intercept</b>: where ONE line meets an axis. On the x-axis y = 0; on the y-axis x = 0 — so an intercept always has a 0 in it.</li>' +
+        '<li><b>Intersection</b> (crossing): where the TWO lines meet. It is on both lines, so it makes both equations true.</li>' +
+        '<li>Test a point: is one of its numbers 0? Is it on line A, line B, or both?</li></ol>',
       solution: pt(target) + ' is ' + isAlso.join(' and '),
       hint: 'On an axis, one of the numbers is 0. Where the lines cross, the point is on both of them.',
       mount(stage, submit) {
@@ -632,6 +868,9 @@ MathLab.app('crossing', {
       prompt: 'How many solutions does this pair have?',
       question: '',
       solution: answer[kind],
+      explain: '<ol><li>Rearrange both into y = mx + c.</li><li>Different gradients → the lines cross once → <b>exactly one</b> solution (even if they cross at a right angle).</li>' +
+        '<li>Same gradient, different intercept → parallel, never meet → <b>no</b> solution. Algebra gives something false like 0 = 7.</li>' +
+        '<li>Same gradient AND same intercept → the same line twice → <b>infinitely many</b>. Algebra gives 0 = 0.</li></ol>',
       hint: 'Get both into y = mx + c. Compare the gradients first, then the intercepts.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
@@ -671,6 +910,7 @@ MathLab.app('crossing', {
       prompt: 'Is ' + pt(cand) + ' the solution of this pair?',
       question: '',
       solution: works ? 'Yes' : 'No — the solution is ' + pt(sol),
+      explain: 'A solution of a pair must make BOTH equations true. Put x and y into each one: work out the left side, compare it with the right side. Equal both times → it is the solution. Equal in only one → it is just a point on that one line.',
       hint: 'Put x and y into BOTH equations. Do the two sides come out equal each time?',
       mount(stage, submit) {
         const box = document.createElement('div');
@@ -692,10 +932,10 @@ MathLab.app('crossing', {
     };
   }
 
-  const MIX = [findRound, drawRound, sortRound, countRound, checkRound];
+  const MIX = [findRound, guidedRound, drawRound, sortRound, countRound, checkRound];
 
   return [
-    { name: '① Find the crossing', make: findRound },
+    { name: '① Step by step', make: guidedRound },
     { name: '② Draw both', make: drawRound },
     { name: '③ Intercept or crossing?', make: sortRound },
     { name: '④ How many solutions?', make: countRound },
@@ -730,6 +970,49 @@ MathLab.app('two-equations', {
   function scriptFor(pr, method) {
     if (method === 'sub') return L.substitutionScript(pr.p.eS, pr.p.eO, pr.p.solved, pr.p.free);
     return L.eliminationScript(pr.e1, pr.e2, pr.p.target || pick(['x', 'y']));
+  }
+
+  /** The whole solution, every line with the reason it is allowed — the "How it works" panel. */
+  function explainScript(pr, script, steps) {
+    const lines = steps.filter((st) => st.kind !== 'pick').map((st) =>
+      '<li><span class="m">' + st.writtenHTML + '</span><br>' + (st.because || '') + '</li>');
+    const pickStep = steps.find((st) => st.kind === 'pick');
+    const intro = script.method === 'substitution'
+      ? 'Substitution: one equation already says what one letter equals, so put that into the other.'
+      : 'Elimination: make one letter\'s terms the same size, then ' + (pickStep ? 'add or subtract the equations so that letter disappears.' : 'combine the equations so it disappears.');
+    return intro + '<ol>' + lines.join('') + '<li>Check in both: <div class="checks">' +
+      L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div></li></ol>';
+  }
+
+  function workedRound() {
+    const kind = pick(['sub', 'elim']);
+    const pr = problem(kind);
+    const script = scriptFor(pr, kind === 'sub' ? 'sub' : 'elim');
+    const steps = script.steps.map(L.present).filter((st) => st.kind !== 'pick' || true);
+    return {
+      noScore: true,
+      noHint: true,
+      prompt: '📖 Watch one being solved — tap for each step.',
+      question: '',
+      mount(stage, submit) {
+        stage.innerHTML = '<div class="eqs"><div class="eqn a"><span class="tag">①</span>' + pr.show1 + '</div><div class="eqn b"><span class="tag">②</span>' + pr.show2 + '</div></div>';
+        const items = steps.map((st) => {
+          if (st.kind === 'pick') {
+            const right = st.options.find((o) => o.ok);
+            return { html: right.label, because: right.because || right.why };
+          }
+          return { html: (st.tag ? '<span class="kind-blurb">' + st.tag + '</span>' : '') + st.writtenHTML, because: st.because };
+        });
+        items.push({ html: 'x = ' + qHTML(pr.sol.x) + ', y = ' + qHTML(pr.sol.y), because: 'Both values — that is the answer. Check it:<div class="checks">' +
+          L.checkHTML(pr.e1, pr.sol, ORDER, '①') + L.checkHTML(pr.e2, pr.sol, ORDER, '②') + '</div>' });
+        MathLab.worked(stage, {
+          title: script.method === 'substitution' ? 'Substitution' : 'Elimination',
+          steps: items,
+          tryLevel: kind === 'sub' ? 1 : 2,
+        });
+        submit(true);
+      },
+    };
   }
 
   function makeRound(mode) {
@@ -780,6 +1063,7 @@ MathLab.app('two-equations', {
         function begin(method) {
           script = scriptFor(pr, method);
           steps = script.steps.map(L.present);
+          round.explain = () => explainScript(pr, script, steps);
           i = 0;
           next();
         }
@@ -818,11 +1102,11 @@ MathLab.app('two-equations', {
                     ok = match(1) || match(-1);
                   }
                 }
-                if (ok) { setTimeout(done, 450); return { ok: true, why: 'Yes — ' + st.writtenHTML, right: ['a'] }; }
+                if (ok) return { ok: true, why: 'Yes. ' + (st.because || ''), right: ['a'], next: done };
                 tries++; misses++;
                 note('trap', { trap: 'typed-' + st.kind });
                 const hintTrap = st.options.find((o) => !o.ok && o.why);
-                if (tries >= 2) { setTimeout(done, 1600); return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML, wrong: ['a'] }; }
+                if (tries >= 2) return { ok: false, lock: true, why: 'This is the line: ' + st.writtenHTML + '<br>' + (st.because || ''), wrong: ['a'], next: done };
                 return { ok: false, why: 'Not that. ' + (hintTrap ? 'Watch out: ' + hintTrap.why : 'Check each term.'), wrong: ['a'] };
               },
             });
@@ -876,7 +1160,7 @@ MathLab.app('two-equations', {
                 }
                 return { ok: false, why: 'Check it in both: <div class="checks">' + L.checkHTML(pr.e1, pair, ORDER, '①') + L.checkHTML(pr.e2, pair, ORDER, '②') + '</div>', wrong: [!okX && 'x', !okY && 'y'].filter(Boolean) };
               }
-              setTimeout(() => settle(pair), 300);
+              settle(pair);
               return { ok: true, right: ['x', 'y'] };
             },
           });
@@ -917,6 +1201,7 @@ MathLab.app('two-equations', {
   }
 
   return [
+    { name: '📖 Worked example', make: workedRound },
     { name: '① Substitution', make: () => makeRound('sub') },
     { name: '② Elimination', make: () => makeRound('elim') },
     { name: 'Mixed', make: () => makeRound('mixed') },
@@ -1007,6 +1292,61 @@ MathLab.app('story-solver', {
     grid.say('Below ' + g.nStar + ' the lower line is the cheaper deal; above it, the other one.');
   }
 
+  const checksFor = (s) => s.eqs.map((e, i) => (e.layout || s.layout
+    ? L.checkDispHTML(layoutOf(s, e)(e.eq), s.sol, s.eqs.length > 1 ? (i ? '②' : '①') : '', s.cents2 ? L.qMoney : qNice)
+    : L.checkHTML(e.eq, s.sol, s.order, s.eqs.length > 1 ? (i ? '②' : '①') : '', s.cents2 ? L.qMoney : qNice))).join('');
+
+  /** How to get from the pair to the values — the step most likely to be skipped on paper. */
+  function solveTip(s) {
+    if (s.eqs.length === 1) return '<br>One letter, one equation: collect the terms, then divide.';
+    const [e1, e2] = s.eqs.map((e) => e.eq);
+    const [u, v] = s.order;
+    const solvedFor = [e1, e2].find((e) => Object.keys(e.co).some((k) => L.eq(L.coef(e, k), 1) && Object.keys(e.co).filter((j) => !L.isZero(L.coef(e, j))).length <= 2));
+    return '<br>' + (s.layout ? 'Both equations say what c is, so set them equal: the costs are the same where the right-hand sides are equal.'
+      : solvedFor ? 'One equation is easy to rearrange for one letter — substitute it into the other.'
+      : 'Make the ' + u + '-terms (or the ' + v + '-terms) the same size, then subtract or add to make that letter disappear.');
+  }
+
+  /** The whole story, worked: kind, letters, each equation with its reason, solving, answer. */
+  function explainStory(s) {
+    const items = [
+      '<b>Kind:</b> ' + Stories.KINDS[s.family].label + ' — ' + Stories.KINDS[s.family].blurb.toLowerCase(),
+      '<b>Letters:</b> ' + s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join('; '),
+      ...s.eqs.map((e, i) => '<span class="m">' + rightHTML(s, e) + '</span><br>' + e.because),
+      '<b>Solve:</b> ' + s.letters.map((l) => mathHTML(l.v) + ' = ' + valFmt(s, l.v)(s.sol[l.v])).join(', ') + solveTip(s) + '<div class="checks">' + checksFor(s) + '</div>',
+    ];
+    if (s.derived) items.push(s.derived.map((d) => d.label + ' = ' + d.html + ' = ' + qNice(d.value(s.sol))).join(', '));
+    if (s.final && s.final.value) items.push(s.final.prompt.replace(/<[^>]+>/g, '') + ' ' + qNice(s.final.value) + ' ' + s.final.unit + (s.final.because ? ' — ' + s.final.because : ''));
+    if (s.final && s.final.options) items.push(s.final.prompt + ' <b>' + s.final.options.find((o) => o.ok).label + '</b>');
+    items.push('<b>Answer:</b> ' + s.sentence);
+    return '<ol>' + items.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+  }
+
+  function workedRound() {
+    const s = Stories.make();
+    return {
+      noScore: true,
+      noHint: true,
+      prompt: '📖 Watch one being solved — tap for each step.',
+      question: '',
+      mount(stage, submit) {
+        stage.innerHTML = '<p class="story">' + s.text + '</p>' + figure(s.figure);
+        const steps = [
+          { html: Stories.KINDS[s.family].label, because: 'What kind is it? ' + Stories.KINDS[s.family].blurb },
+          { html: s.letters.map((l) => mathHTML(l.v) + ' = ' + l.means).join('<br>'), because: 'Say exactly what each letter stands for — a number of things, not the things.' },
+          ...s.eqs.map((e) => ({ html: rightHTML(s, e), because: e.because })),
+          { html: s.letters.map((l) => mathHTML(l.v) + ' = ' + valFmt(s, l.v)(s.sol[l.v])).join(', '), because: solveTip(s).replace('<br>', '') + '<div class="checks">' + checksFor(s) + '</div>' },
+        ];
+        if (s.derived) steps.push({ html: s.derived.map((d) => d.label + ': ' + qNice(d.value(s.sol))).join(', '), because: 'The question asked for every one of them.' });
+        if (s.final && s.final.value) steps.push({ html: qNice(s.final.value) + ' ' + s.final.unit, because: (s.final.because || s.final.prompt) });
+        if (s.final && s.final.options) steps.push({ html: s.final.options.find((o) => o.ok).label, because: 'Answer the question asked: it wants a decision.' });
+        steps.push({ html: s.sentence, because: 'Does it make sense? Whole numbers of things, nothing negative, and it fits the story.' });
+        MathLab.worked(stage, { steps, tryLevel: 1 });
+        submit(true);
+      },
+    };
+  }
+
   /* ---------- one round ---------- */
 
   function makeRound(opts) {
@@ -1017,6 +1357,7 @@ MathLab.app('story-solver', {
       prompt: '',
       question: '',
       solution: s.sentence,
+      explain: () => explainStory(s),
       mount(stage, submit) {
         let misses = 0, stuck = 0, cur = null;
         stage.innerHTML = `
@@ -1090,7 +1431,7 @@ MathLab.app('story-solver', {
         /* --- pick each equation --- */
         function eqStep(e, k) {
           promptEl.innerHTML = e.prompt;
-          const options = shuffle(e.options.map((o) => ({ html: optHTML(s, e, o), ok: o.ok, why: o.why, trap: o.trap })));
+          const options = shuffle(e.options.map((o) => ({ html: optHTML(s, e, o), ok: o.ok, why: o.ok ? e.because : o.why, trap: o.trap })));
           cur = MathLab.choice(area, {
             options,
             onMiss: () => misses++,
@@ -1117,8 +1458,7 @@ MathLab.app('story-solver', {
               const covered = new Set(matched.filter((m) => m >= 0));
               if (covered.size === s.eqs.length) {
                 s.eqs.forEach((e, k) => write(k ? '②' : '①', rightHTML(s, e)));
-                setTimeout(next, 500);
-                return { ok: true, right: flds.map((f) => f.key) };
+                return { ok: true, right: flds.map((f) => f.key), why: 'Yes. ' + s.eqs.map((e) => e.because).join(' '), next };
               }
               misses++;
               if (!unread.length) tries++;
@@ -1130,8 +1470,7 @@ MathLab.app('story-solver', {
               }
               if (tries >= 3) {
                 s.eqs.forEach((e, k) => write(k ? '②' : '①', rightHTML(s, e)));
-                setTimeout(next, 1800);
-                return { ok: false, lock: true, why: 'Here they are — compare them with yours.', wrong };
+                return { ok: false, lock: true, why: 'Here they are — compare them with yours. ' + s.eqs.map((e) => e.because).join(' '), wrong, next };
               }
               return { ok: false, why, wrong };
             },
@@ -1173,15 +1512,15 @@ MathLab.app('story-solver', {
               const okAll = letters.every((k) => L.eq(vals[k], s.sol[k]));
               if (okAll) {
                 write('', letters.map((k) => mathHTML(k) + ' = ' + valFmt(s, k)(s.sol[k])).join(', '));
-                setTimeout(next, 450);
-                return { ok: true, right: letters };
+                return { ok: true, right: letters, next,
+                  why: 'They work in ' + (s.eqs.length > 1 ? 'both equations' : 'the equation') + ':<div class="checks">' + checksFor(s) + '</div>' };
               }
               misses++; tries++;
               const checks = s.eqs.map((e, i) => L.checkHTML(e.eq, vals, s.order, i ? '②' : '①')).join('');
               if (tries >= 3) {
                 write('', letters.map((k) => mathHTML(k) + ' = ' + valFmt(s, k)(s.sol[k])).join(', '));
-                setTimeout(next, 2200);
-                return { ok: false, lock: true, why: 'The solution is ' + letters.map((k) => k + ' = ' + qNice(s.sol[k])).join(', ') + '.', wrong: letters };
+                return { ok: false, lock: true, next, wrong: letters,
+                  why: 'The solution is ' + letters.map((k) => k + ' = ' + qNice(s.sol[k])).join(', ') + '. It works:<div class="checks">' + checksFor(s) + '</div>' + solveTip(s) };
               }
               return { ok: false, why: 'Put them back in: <div class="checks">' + checks + '</div>', wrong: letters.filter((k) => !L.eq(vals[k], s.sol[k])) };
             },
@@ -1203,14 +1542,12 @@ MathLab.app('story-solver', {
               const wrong = keys.filter((k, i) => { const g = L.parseNumber(v[k]); return !g || !L.eq(g, want[i]); });
               if (!wrong.length) {
                 write('', s.derived.map((d, i) => d.label + ': ' + qNice(want[i])).join(', '));
-                setTimeout(next, 450);
-                return { ok: true, right: keys };
+                return { ok: true, right: keys, next, why: 'Each one from its expression: ' + s.derived.map((d, i) => d.label + ' = ' + d.html + ' = ' + qNice(want[i])).join(', ') + '.' };
               }
               misses++; tries++;
               if (tries >= 3) {
                 write('', s.derived.map((d, i) => d.label + ': ' + qNice(want[i])).join(', '));
-                setTimeout(next, 1800);
-                return { ok: false, lock: true, why: s.derived.map((d, i) => d.label + ' = ' + qNice(want[i])).join(', ') + '.', wrong };
+                return { ok: false, lock: true, next, why: s.derived.map((d, i) => d.label + ' = ' + qNice(want[i])).join(', ') + '.', wrong };
               }
               return { ok: false, why: 'Use the expressions: ' + s.derived.map((d) => d.label + ' = ' + d.html).join(', ') + '.', wrong };
             },
@@ -1237,11 +1574,11 @@ MathLab.app('story-solver', {
               if (!v.v) { note('unfinished', { what: 'hence part' }); return { ok: false, why: 'Finish the question — this part counts too.', wrong: ['v'] }; }
               const g = L.parseNumber(v.v);
               if (!g) return { ok: false, why: 'Write a number.', wrong: ['v'] };
-              if (L.eq(g, f.value)) { write('', qNice(f.value) + ' ' + f.unit); setTimeout(next, 450); return { ok: true, right: ['v'] }; }
+              if (L.eq(g, f.value)) { write('', qNice(f.value) + ' ' + f.unit); return { ok: true, right: ['v'], next, why: f.because || 'Yes — from the values you found.' }; }
               misses++; tries++;
               const t = (f.traps || []).find((tr) => L.eq(tr.value, g));
               if (t) note('trap', { trap: 'hence-' + s.family });
-              if (tries >= 3) { write('', qNice(f.value) + ' ' + f.unit); setTimeout(next, 1800); return { ok: false, lock: true, why: 'It is ' + qNice(f.value) + ' ' + f.unit + '.', wrong: ['v'] }; }
+              if (tries >= 3) { write('', qNice(f.value) + ' ' + f.unit); return { ok: false, lock: true, next, why: 'It is ' + qNice(f.value) + ' ' + f.unit + '. ' + (f.because || ''), wrong: ['v'] }; }
               return { ok: false, why: t ? t.why : 'Use the values you found.', wrong: ['v'] };
             },
           });
@@ -1308,6 +1645,7 @@ MathLab.app('story-solver', {
   }
 
   return [
+    { name: '📖 Worked example', make: workedRound },
     { name: 'Mixed', make: () => makeRound({ kind: true }) },
     { name: 'Which kind?', make: () => makeRound({ kind: true, kindOnly: true }) },
     { name: 'Count & value', make: () => makeRound({ family: ['count-value', 'relation'] }) },
@@ -1354,6 +1692,7 @@ MathLab.app('step-builder', {
       mount(stage, submit) {
         let items = cloneAll(problem.items);
         const lines = [render(items)];
+        const whys = ['Start.'];   // the reason for each line, for the "How it works" panel
         let wrongMoves = 0;
         let hintRung = 0;
         let finished = false;
@@ -1432,6 +1771,7 @@ MathLab.app('step-builder', {
           const { next, why } = MOVES[key].apply(items);
           items = next;
           lines.push(render(items));
+          whys.push(why);
           paint();
 
           if (reachedGoal(problem.goal, items)) {
@@ -1488,6 +1828,7 @@ MathLab.app('step-builder', {
 
           finished = true;
           round.solution = render(items);
+          round.explain = '<ol>' + lines.map((ln, i) => '<li><span class="m">' + mathHTML(ln) + '</span>' + (whys[i] ? '<br>' + whys[i] : '') + '</li>').join('') + '</ol>';
           paint();
           el.stuck.disabled = true;
 
@@ -1700,6 +2041,10 @@ MathLab.app('like-terms', {
       hint: 'Same letters <i>and</i> same powers. The number in front does not matter — ' +
             '3<i class="var">pq</i> and −7<i class="var">pq</i> are the same shape.',
       solution: likes.map((t) => formatTerm(t)).join(', '),
+      rightWhy: 'Same letters with the same powers — the number in front never matters.',
+      explain: '<ol><li>The shape of ' + mathHTML(formatTerm(target)) + ' is its letters and their powers: ' + mathHTML(formatTerm({ coeff: 1, vars: target.vars })) + '.</li>' +
+        '<li>A term is the same shape only if it has exactly those letters, each to exactly that power. Order does not matter (pq = qp).</li>' +
+        '<li>Same shape here: ' + likes.map((t) => mathHTML(formatTerm(t))).join(', ') + '. The others differ in a letter or a power.</li></ol>',
 
       mount(stage, submit) {
         const chosen = new Set();
@@ -1949,6 +2294,11 @@ MathLab.app('like-terms', {
       hint: 'Join the matching shapes first, then add the numbers in front. ' +
             'The letters and powers stay exactly as they are.',
       solution: answer,
+      explain: '<ol>' + totals.map((t) => {
+        const same = terms.filter((x) => signature(x) === signature(t));
+        return '<li>' + same.map((x) => mathHTML(formatTerm(x))).join(', ') + ' are the same shape: add the numbers in front, ' +
+          same.map((x) => x.coeff).join(' + ').replace(/\+ -/g, '− ') + ' = ' + t.coeff + ' → ' + mathHTML(formatTerm(t)) + '</li>';
+      }).join('') + '<li>Different shapes stay separate: <b>' + mathHTML(answer) + '</b></li></ol>',
 
       mount(stage, submit) {
         MathLab.textAnswer(stage, submit, {
@@ -2026,12 +2376,17 @@ MathLab.app('substitution', {
     const shown = coeff === 1 ? names.join('') : coeff + names.join('');
     const value = names.reduce((acc, n) => acc * vals[n], coeff);
 
+    const subbed = (coeff === 1 ? '' : coeff + ' × ') + names.map((n) => (vals[n] < 0 ? '(' + vals[n] + ')' : vals[n])).join(' × ');
     return round({
       prompt: 'Find the value of:',
       question: mathHTML(shown),
       given: givens(useThird ? [x, y, z] : [x, y], vals),
       value,
       solution: String(value),
+      rightWhy: subbed + ' = ' + value + '.',
+      explain: '<ol><li>Letters written side by side are multiplied: ' + mathHTML(shown) + ' means ' + (coeff === 1 ? '' : coeff + ' × ') + names.join(' × ') + '.</li>' +
+        '<li>Swap in the numbers, keeping negatives in brackets: ' + subbed + '.</li>' +
+        '<li>Multiply. Count the negatives: an even number of them makes the answer positive, an odd number negative. = <b>' + value + '</b>.</li></ol>',
       hint: 'Replace each letter with its number, then multiply. Two negatives multiply to a positive.',
     });
   }
@@ -2052,12 +2407,17 @@ MathLab.app('substitution', {
 
     const question = mathHTML(c1 + x + y) + (minus ? ' − ' : ' + ') + mathHTML(c2 + z);
 
+    const b = (v) => (v < 0 ? '(' + v + ')' : v);
     return round({
       prompt: 'Find the value of:',
       question,
       given: givens([x, y, z], vals),
       value,
       solution: String(value),
+      rightWhy: first + (minus ? ' − ' : ' + ') + b(second) + ' = ' + value + '.',
+      explain: '<ol><li>First part: ' + c1 + ' × ' + b(vals[x]) + ' × ' + b(vals[y]) + ' = ' + first + '.</li>' +
+        '<li>Second part: ' + c2 + ' × ' + b(vals[z]) + ' = ' + second + '.</li>' +
+        '<li>Then ' + first + (minus ? ' − ' : ' + ') + b(second) + ' = <b>' + value + '</b>' + (minus && second < 0 ? ' (taking away a negative adds)' : '') + '.</li></ol>',
       hint: 'Do each part on its own first, then subtract or add. ' +
             c1 + '<i class="var">' + x + '</i><i class="var">' + y + '</i> means ' +
             c1 + ' × ' + vals[x] + ' × ' + vals[y] + '.',
@@ -2089,6 +2449,7 @@ MathLab.app('substitution', {
       given: givens([x, y, z], vals),
       value: k,
       solution: String(k),
+      explain: '<ol><li>Top: ' + vx + ' + ' + vy + ' + ' + vz + ' = ' + (vx + vy + vz) + '.</li><li>Bottom: ' + vx + ' − ' + (vz < 0 ? '(' + vz + ')' : vz) + ' = ' + den + '.</li><li>Divide: ' + (vx + vy + vz) + ' ÷ ' + den + ' = <b>' + k + '</b>.</li></ol>',
       hint: 'Work out the top and the bottom separately, then divide. Top = ' +
             vx + ' + ' + vy + ' + ' + vz + '.',
     });
@@ -2116,6 +2477,7 @@ MathLab.app('substitution', {
       given: givens([x, y, z], vals),
       value,
       solution: String(value),
+      explain: '<ol><li>Bottom: ' + vx + ' + ' + (vz < 0 ? '(' + vz + ')' : vz) + ' = ' + s + '.</li><li>Top: ' + c + ' × ' + (vy < 0 ? '(' + vy + ')' : vy) + ' = ' + c * vy + '.</li><li>Divide: ' + c * vy + ' ÷ ' + s + ' = <b>' + value + '</b>.</li></ol>',
       hint: 'Bottom first: ' + vx + ' + ' + vz + ' = ' + s +
             '. Then divide the top by it.',
     });
@@ -2251,6 +2613,11 @@ MathLab.app('hcf-detective', {
       question: mathHTML(label(a)) + '<span class="hcf-and">and</span>' + mathHTML(label(b)),
       hint: note + ' If nothing is shared, the highest common factor is just 1.',
       solution: asTerm(want),
+      rightWhy: 'Exactly the pieces in both terms, multiplied together.',
+      explain: '<ol><li>Break the first term into pieces: ' + pa.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
+        '<li>Break the second into pieces: ' + pb.map((p) => mathHTML(p)).join(' · ') + '.</li>' +
+        '<li>Keep only pieces that appear in BOTH (as many times as the fewer one has): ' + (want.length ? want.map((p) => mathHTML(p)).join(' · ') : 'none') + '.</li>' +
+        '<li>Multiply them: HCF = <b>' + mathHTML(asTerm(want)) + '</b>.</li></ol>',
 
       mount(stage, submit) {
         const chosen = [];
@@ -2434,6 +2801,9 @@ MathLab.app('chocolate-box', {
       hint: 'Read it again one clause at a time, and write down what each clause does. ' +
             'If something happens to a whole amount, that amount needs a bracket round it.',
       solution: s.right.text,
+      rightWhy: 'Each clause of the story became one part of the expression.',
+      explain: '<ol><li>The expression is <b>' + mathHTML(s.right.text) + '</b>.</li>' +
+        s.wrong.map((w) => '<li>Not ' + mathHTML(w.text) + ': ' + w.why + '</li>').join('') + '</ol>',
 
       mount(stage, submit) {
         let picked = null;
@@ -2470,7 +2840,7 @@ MathLab.app('chocolate-box', {
 
           why.className = 'why-line ' + (opt.ok ? 'good' : 'bad');
           why.innerHTML = opt.ok
-            ? 'Yes — now put a number in.'
+            ? 'Yes — ' + mathHTML(s.right.text) + ' does each thing in the story, in order. Now put a number in.'
             : opt.why + ' The expression is <b>' + mathHTML(s.right.text) + '</b>.';
 
           askValue(opt.ok);

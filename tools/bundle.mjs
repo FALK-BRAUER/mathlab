@@ -59,6 +59,15 @@ const appFiles = readdirSync(join(root, 'apps'))
   .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 const registrations = appFiles.map(registration).join('\n\n');
 
+const PATH = `<div class="idea path">
+    <b>The learning path — lines and simultaneous equations</b>
+    <p>Work through these in order: <strong>1 📈 Line Lab</strong> → <strong>2 ✖️ Crossing Point</strong> →
+    <strong>3 ⚖️ Two Equations</strong> → <strong>4 🧾 Story Solver</strong>.</p>
+    <p>Inside each one: start with <strong>📖 Worked example</strong>, then the levels ① ② ③ in order, then <strong>Mixed</strong>.
+    Five right in a row and it offers the next level. Wrong answers open <strong>How it works</strong> with that question worked through.</p>
+    <p><strong>🎯 Daily Mix</strong>: ten minutes every day, from everything — this is what makes it stick.</p>
+  </div>`;
+
 const page = `<title>mathlab</title>
 <style>
 ${css}
@@ -102,8 +111,9 @@ button.tile p { margin: 0; color: var(--muted); font-size: .9rem; }
       <h1>🧪 mathlab</h1>
       <p class="tagline">Little games for the algebra chapter. Pick one and start.</p>
     </div>
+    ${PATH}
     <div class="idea">
-      <b>The one idea</b>
+      <b>The one idea of the first chapter (expressions)</b>
       <p>A block is a <em>thing</em>. <span class="op">+</span> and <span class="op">−</span> are the
       joints between blocks — they are not instructions telling you to do something.</p>
       <p>Blocks of the same shape can join. Different shapes never join, no matter how much
@@ -258,8 +268,10 @@ const rootHub = `<!doctype html>
     <p class="tagline">Little games for the algebra chapter. Pick one and start.</p>
   </div>
 
+  ${PATH}
+
   <div class="idea">
-    <b>The one idea</b>
+    <b>The one idea of the first chapter (expressions)</b>
     <p>A block is a <em>thing</em>. <span class="op">+</span> and <span class="op">−</span> are the
     joints between blocks — they are not instructions telling you to do something.</p>
     <p>Blocks of the same shape can join. Different shapes never join, no matter how much

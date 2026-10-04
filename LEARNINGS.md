@@ -125,3 +125,16 @@ avoid the shapes that cause it, and the checker asserts every trap is false at t
 found three levels where a wrong answer could be retried forever with no way out. A kid
 who is stuck needs an exit that still teaches: after three misses the answer is shown and
 the round ends, counted as not-first-try.
+
+## 2026-10-05 — A test run on a desktop engine is not the phone
+Every check passed in headless Chrome, and the first look on a real iPhone was a black grid,
+a keypad of overlapping buttons and unreadable options. Nothing was wrong with the code: the
+phone ran the new scripts against the theme.css it had cached from the previous version.
+GitHub Pages sends max-age=600 and Safari keeps files longer. The bundler now stamps every
+shared file reference with `?v=<content hash>`. Look at the real device after every deploy.
+
+## 2026-10-05 — "Correct" is not an explanation
+Falk: never jump on when it is right — say why it is right. Multi-step rounds advanced 380 ms
+after a right pick, so the reason flashed past unread. Now a right pick shows its reason and
+waits for Continue, every question carries a worked "How it works" panel, and the checker
+fails on any step without a reason (seen red with one reason removed).

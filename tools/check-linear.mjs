@@ -159,6 +159,9 @@ function checkScript(name, script, sol, eqs) {
     const st = L.present(raw);
     const where = name + ':' + st.kind;
     ok(st.options.filter((o) => o.ok).length >= 1, where, 'has a right option');
+    // every right answer explains itself: that reason is what she reads after picking it
+    for (const o of st.options.filter((x) => x.ok)) ok(o.why && !/undefined|NaN/.test(o.why), where, 'the right option says why it is right', st.prompt);
+    if (st.kind !== 'pick') ok(st.because && !/undefined|NaN/.test(st.because), where, 'the step has a reason for the worked solution', st.prompt);
     if (st.kind !== 'pick') ok(st.options.filter((o) => o.ok).length === 1, where, 'exactly one right option', st.prompt);
     const htmls = st.options.map((o) => o.html);
     ok(new Set(htmls).size === htmls.length, where, 'options look different', htmls.join(' | '));
@@ -216,6 +219,7 @@ for (const fam of Object.keys(Stories.FAMILY)) {
     ok(s.eqs.length >= 1 && s.eqs.length <= 2, where, 'one or two equations');
     for (const e of s.eqs) {
       ok(L.satisfies(e.eq, s.sol), where, 'answer satisfies the equation', e.prompt + ' ' + txt(e.eq));
+      ok(e.because && !/undefined|NaN/.test(e.because), where, 'the equation says why it is right', e.prompt);
       const right = e.options.filter((o) => o.ok);
       ok(right.length === 1 && L.equivalent(right[0].eq, e.eq), where, 'exactly one right option and it is the equation');
       ok(e.options.length >= 2, where, 'a choice to make', e.prompt);

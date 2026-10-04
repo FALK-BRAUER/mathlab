@@ -924,3 +924,35 @@ ol.working li .tag { font-size: .7em; color: var(--muted); margin-right: 8px; fo
 }
 
 .opt-body { display: block; }
+
+/* ---------- explanations ---------- */
+
+details.explain {
+  margin-top: 12px;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+details.explain summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--brand);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.explain-body { margin-top: 8px; line-height: 1.6; font-size: .98rem; }
+.explain-body ol { margin: 6px 0 0; padding-left: 1.2em; }
+.explain-body li { margin: 4px 0; }
+.explain-body .m { font-weight: 800; white-space: nowrap; }
+
+button.continue { background: var(--good); color: var(--on-brand); }
+
+.worked { margin: 4px 0 6px; }
+.worked-title { display: block; margin-bottom: 8px; }
+ol.worked-steps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 12px; }
+ol.worked-steps li { padding-left: 4px; }
+.w-line { font-size: 1.25rem; font-weight: 800; overflow-x: auto; }
+.w-why { color: var(--muted); font-weight: 600; font-size: .95rem; margin-top: 2px; }

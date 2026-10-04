@@ -147,8 +147,8 @@ const Stories = (() => {
       letters: [{ v: la, means: 'the number of ' + na }, { v: lb, means: 'the number of ' + nb }],
       order,
       eqs: [
-        { prompt: 'Which equation counts them?', eq: countEq, options: countOpts },
-        { prompt: `Which equation adds up the ${valUnits}?`, eq: valEq, options: valOpts },
+        { because: `Every one of the ${N} is either ${na.replace(/s$/, '')} or ${nb.replace(/s$/, '')}, so the two counts add up to ${N}.`, prompt: 'Which equation counts them?', eq: countEq, options: countOpts },
+        { because: `Each ${na.replace(/s$/, '')} is worth ${pa} and each ${nb.replace(/s$/, '')} ${pb}: ${pa} × ${la} plus ${pb} × ${lb} gives the total, ${V} ${valUnits}.`, prompt: `Which equation adds up the ${valUnits}?`, eq: valEq, options: valOpts },
       ],
       sol: { [la]: Q(a), [lb]: Q(b) },
       whole: [la, lb],
@@ -203,8 +203,8 @@ const Stories = (() => {
       letters: [{ v: la, means: `the price of one ${one_a} in dollars` }, { v: lb, means: `the price of one ${one_b} in dollars` }],
       order: [la, lb],
       eqs: [
-        { prompt: `Which equation is ${w1}'s shopping?`, eq: e1, options: opts(e1, x1, y1, t1, t2, w1) },
-        { prompt: `Which equation is ${w2}'s shopping?`, eq: e2, options: opts(e2, x2, y2, t2, t1, w2) },
+        { because: `${w1}'s basket: ${x1} × ${la} plus ${y1} × ${lb} costs ${cents(t1)}.`, prompt: `Which equation is ${w1}'s shopping?`, eq: e1, options: opts(e1, x1, y1, t1, t2, w1) },
+        { because: `${w2}'s basket: ${x2} × ${la} plus ${y2} × ${lb} costs ${cents(t2)}. Same prices, different basket — that is the second equation.`, prompt: `Which equation is ${w2}'s shopping?`, eq: e2, options: opts(e2, x2, y2, t2, t1, w2) },
       ],
       sol: { [la]: Q(pa, 100), [lb]: Q(pb, 100) },
       whole: [],
@@ -243,12 +243,12 @@ const Stories = (() => {
         letters: [{ v: la, means: 'the number of ' + na }, { v: lb, means: 'the number of ' + nb }],
         order: [la, lb],
         eqs: [
-          { prompt: `Which equation says there are ${k} more ${na}?`, eq: rel, layout: () => ({ L: [T(1, la)], R: [T(1, lb), T(k)] }),
+          { because: `${k} more ${na} than ${nb}: take the number of ${nb} and add ${k}.`, prompt: `Which equation says there are ${k} more ${na}?`, eq: rel, layout: () => ({ L: [T(1, la)], R: [T(1, lb), T(k)] }),
             options: options({ eq: rel, disp: { L: [T(1, la)], R: [T(1, lb), T(k)] } }, [
               { eq: E({ [lb]: 1, [la]: -1 }, k), disp: { L: [T(1, lb)], R: [T(1, la), T(k)] }, trap: 'more-reversed', why: `There are more ${na}, so ${la} is the bigger one: add ${k} to ${lb}.` },
               { eq: E({ [la]: 1, [lb]: -k }, 0), disp: { L: [T(1, la)], R: [T(k, lb)] }, trap: 'more-is-times', why: `“${k} more” means add ${k}, not multiply by ${k}.` },
             ]) },
-          { prompt: `Which equation adds up the ${unitsLabel}?`, eq: val,
+          { because: `Count × value for each kind, added: ${pa}${la} + ${pb}${lb} = ${V}.`, prompt: `Which equation adds up the ${unitsLabel}?`, eq: val,
             options: options({ eq: val }, [
               { eq: E({ [la]: pb, [lb]: pa }, V), trap: 'swap-values', why: `${na} are worth ${pa} each, so ${pa}${la}.` },
               { eq: E({ [la]: 1, [lb]: 1 }, V), trap: 'count-is-value', why: `${V} is a value, not a count. Multiply each count by what one is worth.` },
@@ -276,13 +276,13 @@ const Stories = (() => {
         letters: [{ v: la, means: 'the number of ' + na }, { v: lb, means: 'the number of ' + nb }],
         order: [la, lb],
         eqs: [
-          { prompt: `Which equation says there are ${times(k)} as many ${na}?`, eq: rel,
+          { because: `For every one of the ${nb} there are ${k} ${na}, so ${la} is ${k} × ${lb}. Test: if ${lb} = 1, ${la} = ${k}.`, prompt: `Which equation says there are ${times(k)} as many ${na}?`, eq: rel,
             options: options({ eq: rel, disp: { L: [T(1, la)], R: [T(k, lb)] } }, [
               { eq: E({ [lb]: 1, [la]: -k }, 0), disp: { L: [T(k, la)], R: [T(1, lb)] }, trap: 'times-reversed',
                 why: `Check with numbers: if there were 1 of the ${nb}, there would be ${k} ${na}. So ${la} = ${k}${lb}. (This is the famous “6S = P” trap.)` },
               { eq: E({ [la]: 1, [lb]: -1 }, k), disp: { L: [T(1, la)], R: [T(1, lb), T(k)] }, trap: 'times-is-more', why: `“${k} times as many” multiplies — it is not “${k} more”.` },
             ]) },
-          { prompt: 'Which equation is the total?', eq: tot,
+          { because: `Every member is one or the other, so the two counts add up to ${n}.`, prompt: 'Which equation is the total?', eq: tot,
             options: options({ eq: tot }, [
               { eq: E({ [la]: k, [lb]: 1 }, n), trap: 'times-in-total', why: `${la} already counts every one of the ${na}. Just add the two counts.` },
             ]) },
@@ -320,7 +320,7 @@ const Stories = (() => {
       ],
       order: ['n'],
       eqs: [
-        { prompt: 'Which equation adds up the money?', eq: right,
+        { because: `Each kind's count × its value, all added: the ${nA} are ${k}n, the ${nB} n, the ${nC} n − ${d}.`, prompt: 'Which equation adds up the money?', eq: right,
           options: options({ eq: right, disp }, [
             { eq: E({ n: vA * k + vB + vC }, V - vC * d), disp: { L: [B(vA, [T(k, 'n')]), T(vB, 'n'), B(vC, [T(1, 'n'), T(d)])], R: [T(V)] }, trap: 'fewer-reversed',
               why: `${d} fewer means take ${d} away: n ${MINUS} ${d}.` },
@@ -387,7 +387,7 @@ const Stories = (() => {
       final = {
         prompt: `So when is <b>${Bn}</b> the cheaper choice?`,
         options: shuffle([
-          { label: `From ${unitN(nStar + (s.big ? 1 : 1))} on`, ok: true },
+          { label: `From ${unitN(nStar + 1)} on`, ok: true, why: `They are equal at ${unitN(nStar)}. After that ${Bn}'s lower rate keeps it cheaper — and it has to be whole ${s.unit[1]}.` },
           { label: `From ${unitN(nStar)} on`, ok: false, trap: 'break-even-equal', why: `At ${unitN(nStar)} they cost exactly the same — not cheaper yet.` },
           { label: `Up to ${unitN(nStar - 1)}`, ok: false, trap: 'break-even-direction', why: `${Bn} costs more to start with. It only wins once enough ${s.unit[1]} pile up at its lower rate.` },
           { label: 'Never', ok: false, trap: 'break-even-never', why: `Its rate is lower (${pr(r2)} vs ${pr(r1)}), so it always catches up eventually.` },
@@ -414,8 +414,8 @@ const Stories = (() => {
       letters: [{ v: L, means: 'the number of ' + s.unit[1] }, { v: 'c', means: 'the total cost in dollars' }],
       order: [L, 'c'],
       eqs: [
-        { prompt: `Which equation is the cost with ${A}?`, eq: e1, layout: lay, options: optsFor(e1, f1, r1, A) },
-        { prompt: `Which equation is the cost with ${Bn}?`, eq: e2, layout: lay, options: optsFor(e2, f2, r2, Bn) },
+        { because: `${A}: the fee once, plus the rate for every one of the ${s.unit[1]}.`, prompt: `Which equation is the cost with ${A}?`, eq: e1, layout: lay, options: optsFor(e1, f1, r1, A) },
+        { because: `${Bn}: same pattern — fee once, plus rate × ${L}.`, prompt: `Which equation is the cost with ${Bn}?`, eq: e2, layout: lay, options: optsFor(e2, f2, r2, Bn) },
       ],
       layout: lay,
       cents2: true,
@@ -445,12 +445,12 @@ const Stories = (() => {
         letters: [{ v: 'l', means: 'the length in cm' }, { v: 'w', means: 'the width in cm' }],
         order: ['l', 'w'],
         eqs: [
-          { prompt: 'Which equation compares length and width?', eq: rel,
+          { because: `${k} cm longer: the length is the width plus ${k}.`, prompt: 'Which equation compares length and width?', eq: rel,
             options: options({ eq: rel, disp: { L: [T(1, 'l')], R: [T(1, 'w'), T(k)] } }, [
               { eq: E({ w: 1, l: -1 }, k), disp: { L: [T(1, 'w')], R: [T(1, 'l'), T(k)] }, trap: 'more-reversed', why: 'The length is the longer side, so add to w to get l.' },
               { eq: E({ l: 1, w: -k }, 0), disp: { L: [T(1, 'l')], R: [T(k, 'w')] }, trap: 'more-is-times', why: `“${k} cm longer” means add ${k}.` },
             ]) },
-          { prompt: 'Which equation is the perimeter?', eq: per,
+          { because: 'All the way round: two lengths and two widths.', prompt: 'Which equation is the perimeter?', eq: per,
             options: options({ eq: per }, [
               { eq: E({ l: 1, w: 1 }, P), trap: 'half-perimeter', why: 'The perimeter goes all the way round: two lengths and two widths.' },
               { eq: E({ l: 1, w: 1 }, P * 2), trap: 'perimeter-doubled', why: `The perimeter is ${P}; l + w is only half of it.` },
@@ -459,7 +459,7 @@ const Stories = (() => {
         ],
         sol: { l: Q(Lg), w: Q(W) },
         positive: ['l', 'w'],
-        final: askArea ? { prompt: 'Hence, what is its area?', value: Q(Lg * W), unit: 'cm²',
+        final: askArea ? { because: `Area = length × width = ${Lg} × ${W}.`, prompt: 'Hence, what is its area?', value: Q(Lg * W), unit: 'cm²',
           traps: [{ value: Q(2 * (Lg + W)), why: 'That is the perimeter. Area is length × width.' }, { value: Q(Lg + W), why: 'Area multiplies: length × width.' }] } : null,
         sentence: `Length ${Lg} cm, width ${W} cm${askArea ? `, area ${Lg * W} cm²` : ''}.`,
       };
@@ -496,11 +496,11 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'as in the figure' }, { v: 'y', means: 'as in the figure' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'Top and bottom are opposite sides. Which equation?', eq: e1,
+          { because: 'Opposite sides of a ' + kind + ' are equal, so the top expression equals the bottom one.', prompt: 'Top and bottom are opposite sides. Which equation?', eq: e1,
             options: options({ eq: e1, disp: d1 }, [
               { eq: Linear.tidy(E({ x: p + a, y: 0 }, -q - b)), disp: { L: [T(p, 'x'), T(q)], R: [T(-a, 'x'), T(-b)] }, trap: 'adjacent-sides', why: 'Equal sides are opposite each other — top with bottom, left with right.' },
             ]) },
-          { prompt: 'And left and right?', eq: e2,
+          { because: 'Left and right are the other pair of opposite sides — also equal.', prompt: 'And left and right?', eq: e2,
             options: options({ eq: e2, disp: d2 }, [
               { eq: Linear.tidy(E({ x: a, y: c }, -dd - b)), disp: { L: [T(a, 'x'), T(b)], R: [T(-c, 'y'), T(-dd)] }, trap: 'sign-copy', why: 'Copy each side exactly as it is written in the figure.' },
               { eq: Linear.tidy(E({ x: a, y: -r }, s2 - b)), disp: { L: [T(a, 'x'), T(b)], R: [T(r, 'y'), T(s2)] }, trap: 'adjacent-sides', why: 'Left pairs with right, not with the bottom.' },
@@ -508,8 +508,8 @@ const Stories = (() => {
         ],
         sol: { x: Q(x), y: Q(y) },
         final: askP
-          ? { prompt: 'Hence, the perimeter?', value: Q(per), unit: 'cm', traps: [{ value: Q(sTop + sLeft), why: 'All four sides: two of each.' }, { value: Q(area), why: 'That is the area.' }] }
-          : { prompt: 'Hence, the area?', value: Q(area), unit: 'cm²', traps: [{ value: Q(per), why: 'That is the perimeter. Area is length × width.' }, { value: Q(x * y), why: `Area uses the side lengths (${sTop} and ${sLeft}), not x and y.` }] },
+          ? { because: `Sides ${sTop} and ${sLeft}: perimeter = 2 × (${sTop} + ${sLeft}).`, prompt: 'Hence, the perimeter?', value: Q(per), unit: 'cm', traps: [{ value: Q(sTop + sLeft), why: 'All four sides: two of each.' }, { value: Q(area), why: 'That is the area.' }] }
+          : { because: `Put x and y back into the sides: ${sTop} cm and ${sLeft} cm, so area = ${sTop} × ${sLeft}.`, prompt: 'Hence, the area?', value: Q(area), unit: 'cm²', traps: [{ value: Q(per), why: 'That is the perimeter. Area is length × width.' }, { value: Q(x * y), why: `Area uses the side lengths (${sTop} and ${sLeft}), not x and y.` }] },
         sentence: `x = ${x}, y = ${y}: the sides are ${sTop} cm and ${sLeft} cm, ${askP ? `perimeter ${per} cm` : `area ${area} cm²`}.`,
       };
     }
@@ -539,11 +539,11 @@ const Stories = (() => {
         ],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'Which equation links the first and second angles?', eq: rel1,
+          { because: `The first is ${k === 2 ? 'twice' : 'three times'} the second: x = ${k}y.`, prompt: 'Which equation links the first and second angles?', eq: rel1,
             options: options({ eq: rel1, disp: { L: [T(1, 'x')], R: [T(k, 'y')] } }, [
               { eq: E({ y: 1, x: -k }, 0), disp: { L: [T(1, 'y')], R: [T(k, 'x')] }, trap: 'times-reversed', why: `The first is the bigger one: x = ${k}y. Test it: if y = 10, x is ${10 * k}.` },
             ]) },
-          { prompt: 'Which equation uses the angle sum? (The third angle is x − ' + d + '.)', eq: sum,
+          { because: 'Angles in a triangle add to 180°. Put all three in, the third as x − ' + d + '.', prompt: 'Which equation uses the angle sum? (The third angle is x − ' + d + '.)', eq: sum,
             options: options({ eq: sum, disp: { L: [T(1, 'x'), T(1, 'y'), B(1, [T(1, 'x'), T(-d)])], R: [T(180)] } }, [
               { eq: E({ x: 2, y: 1 }, 360 + d), disp: { L: [T(1, 'x'), T(1, 'y'), B(1, [T(1, 'x'), T(-d)])], R: [T(360)] }, trap: 'angle-sum-360', why: 'Angles in a triangle add to 180°. 360° is for a full turn or a quadrilateral.' },
               { eq: E({ x: 2, y: 1 }, 180 - d), disp: { L: [T(1, 'x'), T(1, 'y'), B(1, [T(1, 'x'), T(d)])], R: [T(180)] }, trap: 'more-reversed', why: `The first is ${d}° larger than the third, so the third is x − ${d}.` },
@@ -572,18 +572,18 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'as in the angles' }, { v: 'y', means: 'as in the angles' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'The base angles are equal. Which equation?', eq: e1,
+          { because: 'KL = KM, so the angles opposite them, ∠L and ∠M, are equal.', prompt: 'The base angles are equal. Which equation?', eq: e1,
             options: options({ eq: e1, disp: { L: [T(1, 'x'), T(p)], R: [T(1, 'y'), T(q)] } }, [
               { eq: E({ x: 1, y: -1 }, -q - p), disp: { L: [T(1, 'x'), T(p)], R: [T(1, 'y'), T(-q)] }, trap: 'sign-copy', why: 'Copy ∠M exactly: it is ' + angM + '.' },
               { eq: E({ y: 1 }, p - r), disp: { L: [T(1, 'x'), T(1, 'y'), T(r)], R: [T(1, 'x'), T(p)] }, trap: 'apex-equals-base', why: 'With KL = KM, the equal angles are opposite the equal sides: ∠L and ∠M.' },
             ]) },
-          { prompt: 'Which equation adds the angles?', eq: e2,
+          { because: 'All three angles of the triangle add up to 180°.', prompt: 'Which equation adds the angles?', eq: e2,
             options: options({ eq: e2, disp: { L: [B(1, [T(1, 'x'), T(1, 'y'), T(r)]), B(1, [T(1, 'x'), T(p)]), B(1, [T(1, 'y'), T(q)])], R: [T(180)] } }, [
               { eq: E({ x: 2, y: 2 }, 360 - p - q - r), disp: { L: [B(1, [T(1, 'x'), T(1, 'y'), T(r)]), B(1, [T(1, 'x'), T(p)]), B(1, [T(1, 'y'), T(q)])], R: [T(360)] }, trap: 'angle-sum-360', why: 'A triangle\'s angles add to 180°.' },
             ]) },
         ],
         sol: { x: Q(x), y: Q(y) },
-        final: { prompt: 'Hence, how big is ∠K?', value: Q(apex), unit: '°', traps: [{ value: Q(base), why: 'That is a base angle. ∠K is the one between the equal sides.' }, { value: Q(x + y), why: `∠K = x + y ${r < 0 ? MINUS + ' ' + -r : '+ ' + r}.` }] },
+        final: { because: `∠K = x + y ${r < 0 ? MINUS + ' ' + -r : '+ ' + r} = ${x} + ${y} ${r < 0 ? MINUS + ' ' + -r : '+ ' + r} = ${apex}.`, prompt: 'Hence, how big is ∠K?', value: Q(apex), unit: '°', traps: [{ value: Q(base), why: 'That is a base angle. ∠K is the one between the equal sides.' }, { value: Q(x + y), why: `∠K = x + y ${r < 0 ? MINUS + ' ' + -r : '+ ' + r}.` }] },
         sentence: `x = ${x}, y = ${y}, so ∠K = ${apex}°.`,
       };
     }
@@ -608,17 +608,17 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'as in the sides' }, { v: 'y', means: 'as in the sides' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'First side = second side. Which equation?', eq: e1,
+          { because: 'Equilateral: all three sides are the same length, so any two are equal.', prompt: 'First side = second side. Which equation?', eq: e1,
             options: options({ eq: e1, disp: { L: [T(a1, 'x'), T(b1, 'y'), T(k1)], R: [T(a2, 'x'), T(k2)] } }, [
               { eq: E({ x: a1 - a2, y: b1 }, -k2 - k1), disp: { L: [T(a1, 'x'), T(b1, 'y'), T(k1)], R: [T(a2, 'x'), T(-k2)] }, trap: 'sign-copy', why: `Copy each side exactly: the second side is ${a2 === 1 ? '' : a2}x + ${k2}.` },
             ]) },
-          { prompt: 'Second side = third side. Which equation?', eq: e2,
+          { because: 'And the second equals the third — that gives the second equation.', prompt: 'Second side = third side. Which equation?', eq: e2,
             options: options({ eq: e2, disp: { L: [T(a2, 'x'), T(k2)], R: [T(k3), T(-b3, 'y')] } }, [
               { eq: E({ x: a2, y: -b3 }, k3 - k2), disp: { L: [T(a2, 'x'), T(k2)], R: [T(k3), T(b3, 'y')] }, trap: 'sign-copy', why: `Copy the side exactly: it is ${k3} ${MINUS} ${b3 === 1 ? '' : b3}y.` },
             ]) },
         ],
         sol: { x: Q(x), y: Q(y) },
-        final: { prompt: 'Hence, the perimeter?', value: Q(3 * S), unit: 'cm', traps: [{ value: Q(S), why: 'That is one side. The perimeter is all three.' }] },
+        final: { because: `Each side is ${S} cm (put x and y into any side), so the perimeter is 3 × ${S}.`, prompt: 'Hence, the perimeter?', value: Q(3 * S), unit: 'cm', traps: [{ value: Q(S), why: 'That is one side. The perimeter is all three.' }] },
         sentence: `x = ${x}, y = ${y}: each side is ${S} cm, so the perimeter is ${3 * S} cm.`,
       };
     }
@@ -636,12 +636,12 @@ const Stories = (() => {
       letters: [{ v: 'l', means: 'the length in cm' }, { v: 'w', means: 'the width in cm' }],
       order: ['l', 'w'],
       eqs: [
-        { prompt: 'Which equation compares length and width?', eq: e1,
+        { because: '“Times” multiplies: the length is ' + qNice(fq) + ' × the width.', prompt: 'Which equation compares length and width?', eq: e1,
           options: options({ eq: e1, disp: { L: [T(1, 'l')], R: [T(fq, 'w')] } }, [
             { eq: E({ w: 1, l: Linear.neg(fq) }, 0), disp: { L: [T(1, 'w')], R: [T(fq, 'l')] }, trap: 'times-reversed', why: 'The length is the bigger one: l = ' + qNice(fq) + 'w.' },
             { eq: E({ l: 1, w: -1 }, fq), disp: { L: [T(1, 'l')], R: [T(1, 'w'), T(fq)] }, trap: 'times-is-more', why: '“Times” multiplies.' },
           ]) },
-        { prompt: 'Which equation is the perimeter?', eq: e2,
+        { because: 'All the way round: two lengths and two widths.', prompt: 'Which equation is the perimeter?', eq: e2,
           options: options({ eq: e2 }, [
             { eq: E({ l: 1, w: 1 }, P), trap: 'half-perimeter', why: 'All the way round: two lengths and two widths.' },
           ]) },
@@ -674,9 +674,9 @@ const Stories = (() => {
         letters: [{ v: la, means: `${A}'s age now` }, { v: lb, means: `the ${Bcap}'s age now` }],
         order: [la, lb],
         eqs: [
-          { prompt: 'Which equation is the sum?', eq: e1, options: options({ eq: e1 }, [
+          { because: `Add the two ages: ${S}.`, prompt: 'Which equation is the sum?', eq: e1, options: options({ eq: e1 }, [
             { eq: E({ [la]: 1, [lb]: 1 }, d), trap: 'sum-is-difference', why: `${d} is how much older; ${S} is the sum.` }]) },
-          { prompt: `Which equation says ${A} is ${d} years older?`, eq: e2,
+          { because: `${A} is older, so ${A}'s age is the other one plus ${d}.`, prompt: `Which equation says ${A} is ${d} years older?`, eq: e2,
             options: options({ eq: e2, disp: { L: [T(1, la)], R: [T(1, lb), T(d)] } }, [
               { eq: E({ [lb]: 1, [la]: -1 }, d), disp: { L: [T(1, lb)], R: [T(1, la), T(d)] }, trap: 'more-reversed', why: `${A} is older, so ${A}'s age is the bigger one.` },
               { eq: E({ [la]: 1, [lb]: -d }, 0), disp: { L: [T(1, la)], R: [T(d, lb)] }, trap: 'more-is-times', why: `“${d} years older” adds ${d}.` },
@@ -704,12 +704,12 @@ const Stories = (() => {
         letters: [{ v: la, means: `${A}'s age now` }, { v: lb, means: `the ${Bcap}'s age now` }],
         order: [la, lb],
         eqs: [
-          { prompt: `Which equation is “in ${n} years”?`, eq: e1, options: options({ eq: e1, disp: right }, [
+          { because: `In ${n} years BOTH are ${n} older: ${la} + ${n} and ${lb} + ${n}. Then ${times(k)} the younger one's future age — the bracket keeps the + ${n}.`, prompt: `Which equation is “in ${n} years”?`, eq: e1, options: options({ eq: e1, disp: right }, [
             { eq: E({ [la]: 1, [lb]: -k }, -n), disp: { L: [T(1, la), T(n)], R: [T(k, lb)] }, trap: 'age-shift-one', why: `In ${n} years BOTH of them are ${n} years older.` },
             { eq: E({ [la]: 1, [lb]: -k }, 0), disp: { L: [T(1, la), T(n)], R: [T(k, lb), T(n)] }, trap: 'age-bracket', why: `Twice their future age is ${k}(${lb} + ${n}) — the bracket doubles the ${n} too.` },
             { eq: E({ [lb]: 1, [la]: -k }, k * n - n), disp: { L: [T(1, lb), T(n)], R: [B(k, [T(1, la), T(n)])] }, trap: 'times-reversed', why: `${A} is the older one, so ${A}'s age is the one that is ${k} times as big.` },
           ]) },
-          { prompt: 'Which equation is about their ages now?', eq: e2, options: options({ eq: e2 }, [
+          { because: `Right now the two ages add up to ${S}.`, prompt: 'Which equation is about their ages now?', eq: e2, options: options({ eq: e2 }, [
             { eq: E({ [la]: 1, [lb]: 1 }, S + 2 * n), trap: 'age-shift-now', why: 'That sum is about now — no years added.' }]) },
         ],
         sol: { [la]: Q(a), [lb]: Q(b) },
@@ -731,11 +731,11 @@ const Stories = (() => {
       letters: [{ v: la, means: `${A}'s age now` }, { v: lb, means: `the ${Bcap}'s age now` }],
       order: [la, lb],
       eqs: [
-        { prompt: `Which equation is “${n} years ago”?`, eq: e1, options: options({ eq: e1, disp: { L: [T(1, la), T(-n)], R: [B(k, [T(1, lb), T(-n)])] } }, [
+        { because: `${n} years ago BOTH were ${n} younger: ${la} − ${n} and ${lb} − ${n}, and one was ${times(k)} the other.`, prompt: `Which equation is “${n} years ago”?`, eq: e1, options: options({ eq: e1, disp: { L: [T(1, la), T(-n)], R: [B(k, [T(1, lb), T(-n)])] } }, [
           { eq: E({ [la]: 1, [lb]: -k }, n), disp: { L: [T(1, la), T(-n)], R: [T(k, lb)] }, trap: 'age-shift-one', why: `${n} years ago BOTH were ${n} years younger.` },
           { eq: E({ [la]: 1, [lb]: -k }, k * n + n), disp: { L: [T(1, la), T(-n)], R: [B(k, [T(1, lb), T(n)])] }, trap: 'age-direction', why: '“Ago” means younger: subtract the years.' },
         ]) },
-        { prompt: `Which equation says ${A} is ${d} years older?`, eq: e2, options: options({ eq: e2, disp: { L: [T(1, la)], R: [T(1, lb), T(d)] } }, [
+        { because: `The difference in age never changes: ${A} is always ${d} older.`, prompt: `Which equation says ${A} is ${d} years older?`, eq: e2, options: options({ eq: e2, disp: { L: [T(1, la)], R: [T(1, lb), T(d)] } }, [
           { eq: E({ [lb]: 1, [la]: -1 }, d), disp: { L: [T(1, lb)], R: [T(1, la), T(d)] }, trap: 'more-reversed', why: `${A} is older, so ${la} is the bigger number.` }]) },
       ],
       sol: { [la]: Q(a), [lb]: Q(b) },
@@ -760,8 +760,8 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'the larger number' }, { v: 'y', means: 'the smaller number' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'Which equation is the sum?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ x: 1, y: -1 }, S), trap: 'sum-is-difference', why: 'Sum means add.' }]) },
-          { prompt: 'Which equation is the difference?', eq: e2, options: options({ eq: e2 }, [
+          { because: 'Sum means add: x + y.', prompt: 'Which equation is the sum?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ x: 1, y: -1 }, S), trap: 'sum-is-difference', why: 'Sum means add.' }]) },
+          { because: 'Difference is big minus small: x − y.', prompt: 'Which equation is the difference?', eq: e2, options: options({ eq: e2 }, [
             { eq: E({ y: 1, x: -1 }, d), trap: 'difference-order', why: 'Big minus small gives a positive difference: x − y.' },
             { eq: E({ x: 1, y: -d }, 0), trap: 'more-is-times', why: 'A difference subtracts.' }]) },
         ],
@@ -779,9 +779,9 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'the bigger number' }, { v: 'y', means: 'the smaller number' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: `Which equation says one is ${k} times the other?`, eq: e1, options: options({ eq: e1, disp: { L: [T(1, 'x')], R: [T(k, 'y')] } }, [
+          { because: `The bigger is ${k} × the smaller: x = ${k}y.`, prompt: `Which equation says one is ${k} times the other?`, eq: e1, options: options({ eq: e1, disp: { L: [T(1, 'x')], R: [T(k, 'y')] } }, [
             { eq: E({ y: 1, x: -k }, 0), disp: { L: [T(1, 'y')], R: [T(k, 'x')] }, trap: 'times-reversed', why: `x is the bigger one, so x = ${k}y. Try y = 1: then x = ${k}.` }]) },
-          { prompt: 'Which equation is the sum?', eq: e2, options: options({ eq: e2 }, [{ eq: E({ x: k, y: 1 }, S), trap: 'times-in-total', why: 'x already is the bigger number — just add x and y.' }]) },
+          { because: 'The two numbers added give the total.', prompt: 'Which equation is the sum?', eq: e2, options: options({ eq: e2 }, [{ eq: E({ x: k, y: 1 }, S), trap: 'times-in-total', why: 'x already is the bigger number — just add x and y.' }]) },
         ],
         sol: { x: Q(x), y: Q(y) },
         sentence: `The numbers are ${x} and ${y}.`,
@@ -797,8 +797,8 @@ const Stories = (() => {
         letters: [{ v: 'x', means: 'the larger number' }, { v: 'y', means: 'the smaller number' }],
         order: ['x', 'y'],
         eqs: [
-          { prompt: 'Which equation is the difference?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ y: 1, x: -1 }, d), trap: 'difference-order', why: 'Big minus small: x − y.' }]) },
-          { prompt: 'Which equation is the average?', eq: e2, options: options({ eq: e2, disp: { L: [{ c: Q(1), v: 'avg', raw: Linear.fracHTML('x + y', 2) }], R: [T(A)] } }, [
+          { because: 'Difference is big minus small: x − y.', prompt: 'Which equation is the difference?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ y: 1, x: -1 }, d), trap: 'difference-order', why: 'Big minus small: x − y.' }]) },
+          { because: 'Average = sum ÷ 2, so (x + y) ÷ 2 equals the average.', prompt: 'Which equation is the average?', eq: e2, options: options({ eq: e2, disp: { L: [{ c: Q(1), v: 'avg', raw: Linear.fracHTML('x + y', 2) }], R: [T(A)] } }, [
             { eq: E({ x: 1, y: 1 }, A), trap: 'average-is-sum', why: `The average is the sum divided by 2, so the sum is 2 × ${A}.` },
             { eq: E({ x: 1, y: 1 }, Q(A, 2)), disp: { L: [T(1, 'x'), T(1, 'y')], R: [{ c: Q(1), v: 'avg', raw: Linear.fracHTML(A, 2) }] }, trap: 'average-halved', why: `Undo the ÷ 2 by multiplying: x + y = 2 × ${A}.` }]) },
         ],
@@ -826,7 +826,7 @@ const Stories = (() => {
         ],
         order: ['n'],
         eqs: [
-          { prompt: 'Which equation?', eq: e, options: options({ eq: e, disp: { L: [T(1, 'n'), B(1, [T(1, 'n'), T(gap)])], R: [T(S)] } }, [
+          { because: `The next ${kind === 'whole' ? 'whole' : kind} number is ${gap} more: n + (n + ${gap}).`, prompt: 'Which equation?', eq: e, options: options({ eq: e, disp: { L: [T(1, 'n'), B(1, [T(1, 'n'), T(gap)])], R: [T(S)] } }, [
             gap === 2 ? { eq: E({ n: 2 }, S - 1), disp: { L: [T(1, 'n'), B(1, [T(1, 'n'), T(1)])], R: [T(S)] }, trap: 'consecutive-odd', why: `Consecutive ${kind} numbers are 2 apart: 7 and 9, not 7 and 8.` }
               : { eq: E({ n: 2 }, S - 2), disp: { L: [T(1, 'n'), B(1, [T(1, 'n'), T(2)])], R: [T(S)] }, trap: 'consecutive-odd', why: 'Consecutive whole numbers are 1 apart.' },
             { eq: E({ n: 1 }, S - gap), disp: { L: [T(1, 'n'), T(gap)], R: [T(S)] }, trap: 'consecutive-one', why: 'There are two numbers: n and the next one, n + ' + gap + '.' },
@@ -849,8 +849,8 @@ const Stories = (() => {
       letters: [{ v: 'x', means: 'the first number' }, { v: 'y', means: 'the second number' }],
       order: ['x', 'y'],
       eqs: [
-        { prompt: 'Which equation is the first sentence?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ x: 1, y: a }, S), trap: 'times-wrong-letter', why: `“${word(a)} a number” is ${a}x — the first number.` }]) },
-        { prompt: 'Which equation is the second sentence?', eq: e2, options: options({ eq: e2 }, [
+        { because: `“${word(a)} a number” is ${a}x; add the second number, y.`, prompt: 'Which equation is the first sentence?', eq: e1, options: options({ eq: e1 }, [{ eq: E({ x: 1, y: a }, S), trap: 'times-wrong-letter', why: `“${word(a)} a number” is ${a}x — the first number.` }]) },
+        { because: `The first number minus ${word(b)} the second: x − ${b}y.`, prompt: 'Which equation is the second sentence?', eq: e2, options: options({ eq: e2 }, [
           { eq: E({ x: b, y: -1 }, D), trap: 'times-wrong-letter', why: `It is the second number that is multiplied: x − ${b}y.` },
           { eq: E({ y: b, x: -1 }, D), trap: 'difference-order', why: 'The first number comes first: x − …' }]) },
       ],
@@ -888,10 +888,10 @@ const Stories = (() => {
       letters: [{ v: 'a', means: `${u} of the ${pa}% one` }, { v: 'b', means: `${u} of the ${pb}% one` }],
       order: ['a', 'b'],
       eqs: [
-        { prompt: `Which equation counts the ${u}?`, eq: e1, options: options({ eq: e1 }, [
+        { because: `The two amounts make the whole mix: ${Tot} ${u}.`, prompt: `Which equation counts the ${u}?`, eq: e1, options: options({ eq: e1 }, [
           { eq: E({ a: 1, b: 1 }, c), trap: 'percent-is-amount', why: `${c}% is a strength, not an amount. ${Tot} ${u} is the amount.` },
           { eq: E({ a: 1, b: 1 }, pa + pb), trap: 'percent-is-amount', why: `${pa} and ${pb} are strengths. Add up the ${u}: the whole mix is ${Tot} ${u}.` }]) },
-        { prompt: 'Which equation counts the pure stuff inside?', eq: e2, options: options({ eq: e2 }, [
+        { because: `The pure part: ${pa}% of a plus ${pb}% of b must equal ${c}% of all ${Tot} ${u}.`, prompt: 'Which equation counts the pure stuff inside?', eq: e2, options: options({ eq: e2 }, [
           { eq: E({ a: Q(pa, 100), b: Q(pb, 100) }, Q(c, 100)), trap: 'mixture-no-total', why: `The pure part of the mix is ${c}% OF ${Tot} ${u}: 0.${String(c).padStart(2, '0')} × ${Tot}.` },
           { eq: E({ a: Q(pb, 100), b: Q(pa, 100) }, Q(c * Tot, 100)), trap: 'swap-values', why: `a is the ${pa}% one, so 0.${String(pa).padStart(2, '0')}a.` },
           { eq: E({ a: 1, b: 1 }, Q(c * Tot, 100)), trap: 'count-is-value', why: 'Only part of each litre is the pure stuff: multiply by its percentage.' },
@@ -930,12 +930,12 @@ const Stories = (() => {
       letters: [{ v: 'n', means: 'the top (numerator)' }, { v: 'd', means: 'the bottom (denominator)' }],
       order: ['n', 'd'],
       eqs: [
-        { prompt: `Cross-multiply the first clue. Which equation?`, eq: e1, options: options({ eq: e1, disp: disp1 }, [
+        { because: `Take ${k1} from top and bottom, then cross-multiply: top × the other bottom.`, prompt: `Cross-multiply the first clue. Which equation?`, eq: e1, options: options({ eq: e1, disp: disp1 }, [
           { eq: E({ n: f1.n, d: -f1.d }, k1 * (f1.n - f1.d)), disp: { L: [B(f1.n, [T(1, 'n'), T(-k1)])], R: [B(f1.d, [T(1, 'd'), T(-k1)])] }, trap: 'cross-multiply',
             why: `Cross-multiply means top of one × bottom of the other: ${f1.d} goes with the top n − ${k1}.` },
           { eq: E({ n: f1.d, d: -f1.n }, k1 * f1.d), disp: { L: [B(f1.d, [T(1, 'n'), T(-k1)])], R: [T(f1.n, 'd')] }, trap: 'change-one-part', why: 'Both the top AND the bottom are decreased.' },
         ]) },
-        { prompt: 'And the second clue?', eq: e2, options: options({ eq: e2, disp: disp2 }, [
+        { because: `Add ${k2} to top and bottom, then cross-multiply the same way.`, prompt: 'And the second clue?', eq: e2, options: options({ eq: e2, disp: disp2 }, [
           { eq: E({ n: f2.d, d: -f2.n }, -k2 * f2.d), disp: { L: [B(f2.d, [T(1, 'n'), T(k2)])], R: [T(f2.n, 'd')] }, trap: 'change-one-part', why: 'Both the top AND the bottom are increased.' },
         ]) },
       ],

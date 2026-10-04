@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Like Terms Hunt · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,7 +16,7 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
 <script>
 MathLab.app('like-terms', {
   emoji: '🧲',
@@ -73,6 +73,10 @@ MathLab.app('like-terms', {
       hint: 'Same letters <i>and</i> same powers. The number in front does not matter — ' +
             '3<i class="var">pq</i> and −7<i class="var">pq</i> are the same shape.',
       solution: likes.map((t) => formatTerm(t)).join(', '),
+      rightWhy: 'Same letters with the same powers — the number in front never matters.',
+      explain: '<ol><li>The shape of ' + mathHTML(formatTerm(target)) + ' is its letters and their powers: ' + mathHTML(formatTerm({ coeff: 1, vars: target.vars })) + '.</li>' +
+        '<li>A term is the same shape only if it has exactly those letters, each to exactly that power. Order does not matter (pq = qp).</li>' +
+        '<li>Same shape here: ' + likes.map((t) => mathHTML(formatTerm(t))).join(', ') + '. The others differ in a letter or a power.</li></ol>',
 
       mount(stage, submit) {
         const chosen = new Set();
@@ -322,6 +326,11 @@ MathLab.app('like-terms', {
       hint: 'Join the matching shapes first, then add the numbers in front. ' +
             'The letters and powers stay exactly as they are.',
       solution: answer,
+      explain: '<ol>' + totals.map((t) => {
+        const same = terms.filter((x) => signature(x) === signature(t));
+        return '<li>' + same.map((x) => mathHTML(formatTerm(x))).join(', ') + ' are the same shape: add the numbers in front, ' +
+          same.map((x) => x.coeff).join(' + ').replace(/\+ -/g, '− ') + ' = ' + t.coeff + ' → ' + mathHTML(formatTerm(t)) + '</li>';
+      }).join('') + '<li>Different shapes stay separate: <b>' + mathHTML(answer) + '</b></li></ol>',
 
       mount(stage, submit) {
         MathLab.textAnswer(stage, submit, {

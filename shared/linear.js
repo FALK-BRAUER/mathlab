@@ -588,6 +588,7 @@ const Linear = (() => {
     return {
       kind: 'value',
       v,
+      because: 'Undo the × ' + qText(a) + ': divide both sides by ' + qText(a) + '. ' + qText(k) + ' ÷ ' + qText(a) + ' = ' + qText(right) + '.',
       prompt: extra.prompt || 'So ' + v + ' = ?',
       context: extra.context || MathLab.mathHTML(sideHTML([T(a, v)]) + ' = ' + qHTML(k)),
       answer: right,
@@ -621,6 +622,7 @@ const Linear = (() => {
         kind: 'eq',
         prompt: 'Multiply equation ' + (idx === 1 ? '①' : '②') + ' by ' + qText(f) + ' so the ' + u + '-terms match. What does it become?',
         tag: (idx === 1 ? '①' : '②') + ' × ' + qText(f),
+        because: 'Every term × ' + qText(f) + ' — the right-hand side too. Now the ' + u + '-term is ' + qText(coef(right, u)) + u + ', the same size as in the other equation.',
         answer: right,
         mustMatch: { [u]: coef(right, u) },
         options: choices({ value: right }, scaleTraps(e, f), sameEq),
@@ -637,8 +639,10 @@ const Linear = (() => {
         MathLab.mathHTML(sideHTML([T(coef(B, u), u)])) + '. Add the equations or subtract them?',
       options: [
         { value: 'add', label: 'Add them', ok: !same, trap: 'add-vs-subtract',
+          because: 'Opposite signs: ' + qText(coef(A, u)) + u + ' + (' + qText(coef(B, u)) + u + ') = 0. Adding makes ' + u + ' disappear.',
           why: 'Adding ' + qText(coef(A, u)) + u + ' and ' + qText(coef(B, u)) + u + ' gives ' + qText(add(coef(A, u), coef(B, u))) + u + ' — nothing disappears. Same signs: subtract.' },
         { value: 'sub', label: 'Subtract them', ok: same, trap: 'add-vs-subtract',
+          because: 'Same signs: ' + qText(coef(A, u)) + u + ' − (' + qText(coef(B, u)) + u + ') = 0. Subtracting makes ' + u + ' disappear.',
           why: 'Subtracting gives ' + qText(sub(coef(A, u), coef(B, u))) + u + ' — nothing disappears. Opposite signs: add.' },
       ],
     });
@@ -668,6 +672,8 @@ const Linear = (() => {
       kind: 'eq',
       prompt: (same ? 'Subtract ② from ①' : 'Add ① and ②') + '. What is left?',
       tag: same ? '① − ②' : '① + ②',
+      because: 'Term by term: the ' + u + '-terms cancel, ' + qText(coef(A, w)) + w + (same ? ' − (' : ' + (') + qText(coef(B, w)) + w + ') = ' + qText(coef(one, w)) + w +
+        ', and on the right ' + qText(A.k) + (same ? ' − (' : ' + (') + qText(B.k) + ') = ' + qText(one.k) + '. One letter left.',
       answer: one,
       mustMatch: { [u]: Q(0) },
       options: choices({ value: one }, traps, sameEq),
@@ -699,6 +705,7 @@ const Linear = (() => {
       kind: 'line',
       prompt: 'Put ' + known + ' = ' + qText(val) + ' into ' + tag + '. Which line do you get?',
       tag: known + ' = ' + qText(val) + ' in ' + tag,
+      because: 'Swap ' + known + ' for ' + qText(val) + ': ' + qText(cK) + ' × ' + qText(val) + ' = ' + qText(prod) + '. Everything else stays.',
       answer: E({ [unknown]: cU }, sub(e.k, prod)),
       mustMatch: { [unknown]: cU },
       options: choices(right, traps, sameQ).map((o) => ({ ...o, disp: { L: shown(o.value), R: [T(e.k)] } })),
@@ -708,6 +715,8 @@ const Linear = (() => {
     const s2 = valueStep(cU, unknown, rest, {
       context: MathLab.mathHTML(sideHTML(shown(prod)) + ' = ' + qHTML(e.k)),
     });
+    s2.because = 'Move ' + qText(prod) + ' to the other side (its sign flips): ' + qText(cU) + unknown + ' = ' + qText(e.k) + ' − (' + qText(prod) + ') = ' + qText(rest) +
+      '. Then ÷ ' + qText(cU) + ': ' + unknown + ' = ' + qText(div(rest, cU)) + '.';
     // the extra slip here: moving the number across without changing its sign
     s2.options = choices({ value: div(rest, cU) }, [
       { value: div(add(e.k, prod), cU), trap: 'move-sign', why: 'Moving ' + qText(prod) + ' to the other side changes its sign.' },
@@ -745,6 +754,7 @@ const Linear = (() => {
       kind: 'show',
       prompt: 'Swap ' + solved + ' in ② for what it equals in ①. Which line is that?',
       tag: 'put ① into ②',
+      because: '① says ' + solved + ' is the same as ' + bracket + ', so that whole bracket goes where ' + solved + ' was. Now only ' + free + ' is left.',
       options: [
         { disp: withBracket, ok: true },
         // with 1 in front, dropping the bracket changes nothing — so it is no mistake there
@@ -774,6 +784,7 @@ const Linear = (() => {
       kind: 'show',
       prompt: 'Open the bracket. What do you get?',
       tag: 'open the bracket',
+      because: qText(b) + ' multiplies BOTH terms: ' + qText(b) + ' × ' + qText(m) + free + ' = ' + qText(bm) + free + ' and ' + qText(b) + ' × ' + qText(c) + ' = ' + qText(bc) + '.',
       options: [{ disp: { L: expRight, R: [T(k)] }, ok: true },
         ...expKeep.map((t) => ({ disp: { L: t.L, R: [T(k)] }, ok: false, trap: t.trap, why: t.why }))],
       answer: tidy(E({ [free]: add(a, bm) }, sub(k, bc))),
@@ -797,6 +808,7 @@ const Linear = (() => {
       colOpts.push({ disp: { L: [T(t.c, free), T(bc)], R: [T(k)] }, ok: false, trap: t.trap, why: t.why });
     }
     steps.push({ kind: 'show', prompt: 'Collect the ' + free + '-terms.', tag: 'collect', options: colOpts,
+      because: qText(a) + free + ' and ' + qText(bm) + free + ' are like terms: ' + qText(a) + ' + (' + qText(bm) + ') = ' + qText(tot) + '.',
       answer: tidy(E({ [free]: tot }, sub(k, bc))), written: { L: colRight, R: [T(k)] } });
 
     // 4. move the number across
@@ -806,6 +818,7 @@ const Linear = (() => {
       moveOpts.push({ disp: { L: [T(tot, free)], R: [T(add(k, bc))] }, ok: false, trap: 'move-sign',
         why: 'Moving ' + qText(bc) + ' to the other side changes its sign: ' + qText(k) + ' − (' + qText(bc) + ').' });
       steps.push({ kind: 'show', prompt: 'Get the number on its own side.', tag: 'move the number', options: moveOpts,
+        because: qText(bc) + ' moves across and flips sign: ' + qText(k) + ' − (' + qText(bc) + ') = ' + qText(rhs) + '.',
         answer: E({ [free]: tot }, rhs), written: { L: [T(tot, free)], R: [T(rhs)] } });
     }
 
@@ -819,6 +832,7 @@ const Linear = (() => {
       kind: 'value',
       v: solved,
       prompt: 'Now put ' + free + ' = ' + qText(fVal) + ' back into ①. So ' + solved + ' = ?',
+      because: qText(m) + ' × ' + qText(fVal) + ' = ' + qText(prod) + ', then + ' + qText(c) + ' gives ' + qText(sVal) + '.',
       showContext: true,
       context: MathLab.mathHTML(solved + ' = ' + sideHTML([{ c: m, v: '(' + qText(fVal) + ')', raw: (eq(abs(m), 1) ? '' : qText(abs(m))) + '(' + qHTML(fVal) + ')' }, T(c)])),
       answer: sVal,
@@ -843,7 +857,8 @@ const Linear = (() => {
       else if (step.kind === 'value') html = MathLab.mathHTML(step.v) + ' = ' + qHTML(o.value);
       else if (o.disp) html = dispHTML(o.disp);
       else html = dispHTML(step.layout(o.value));
-      return { ...o, html };
+      // the right option carries the reason it is right — shown when it is picked
+      return { ...o, html, why: o.ok ? (o.because || step.because || o.why) : o.why };
     });
     let writtenHTML = '';
     if (step.kind === 'value') writtenHTML = MathLab.mathHTML(step.v) + ' = ' + qHTML(step.answer);

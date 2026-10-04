@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chocolate Box · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,7 +16,7 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
 <script>
 MathLab.app('chocolate-box', {
   emoji: '🍫',
@@ -129,6 +129,9 @@ MathLab.app('chocolate-box', {
       hint: 'Read it again one clause at a time, and write down what each clause does. ' +
             'If something happens to a whole amount, that amount needs a bracket round it.',
       solution: s.right.text,
+      rightWhy: 'Each clause of the story became one part of the expression.',
+      explain: '<ol><li>The expression is <b>' + mathHTML(s.right.text) + '</b>.</li>' +
+        s.wrong.map((w) => '<li>Not ' + mathHTML(w.text) + ': ' + w.why + '</li>').join('') + '</ol>',
 
       mount(stage, submit) {
         let picked = null;
@@ -165,7 +168,7 @@ MathLab.app('chocolate-box', {
 
           why.className = 'why-line ' + (opt.ok ? 'good' : 'bad');
           why.innerHTML = opt.ok
-            ? 'Yes — now put a number in.'
+            ? 'Yes — ' + mathHTML(s.right.text) + ' does each thing in the story, in order. Now put a number in.'
             : opt.why + ' The expression is <b>' + mathHTML(s.right.text) + '</b>.';
 
           askValue(opt.ok);

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Step Builder · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,7 +16,7 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
 <script src="../shared/algebra.js?v=58b56684"></script>
 <script src="../shared/problems.js?v=7ef0eb90"></script>
 <script>
@@ -52,6 +52,7 @@ MathLab.app('step-builder', {
       mount(stage, submit) {
         let items = cloneAll(problem.items);
         const lines = [render(items)];
+        const whys = ['Start.'];   // the reason for each line, for the "How it works" panel
         let wrongMoves = 0;
         let hintRung = 0;
         let finished = false;
@@ -130,6 +131,7 @@ MathLab.app('step-builder', {
           const { next, why } = MOVES[key].apply(items);
           items = next;
           lines.push(render(items));
+          whys.push(why);
           paint();
 
           if (reachedGoal(problem.goal, items)) {
@@ -186,6 +188,7 @@ MathLab.app('step-builder', {
 
           finished = true;
           round.solution = render(items);
+          round.explain = '<ol>' + lines.map((ln, i) => '<li><span class="m">' + mathHTML(ln) + '</span>' + (whys[i] ? '<br>' + whys[i] : '') + '</li>').join('') + '</ol>';
           paint();
           el.stuck.disabled = true;
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Substitution Machine · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,7 +16,7 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
 <script>
 MathLab.app('substitution', {
   emoji: '🔢',
@@ -74,12 +74,17 @@ MathLab.app('substitution', {
     const shown = coeff === 1 ? names.join('') : coeff + names.join('');
     const value = names.reduce((acc, n) => acc * vals[n], coeff);
 
+    const subbed = (coeff === 1 ? '' : coeff + ' × ') + names.map((n) => (vals[n] < 0 ? '(' + vals[n] + ')' : vals[n])).join(' × ');
     return round({
       prompt: 'Find the value of:',
       question: mathHTML(shown),
       given: givens(useThird ? [x, y, z] : [x, y], vals),
       value,
       solution: String(value),
+      rightWhy: subbed + ' = ' + value + '.',
+      explain: '<ol><li>Letters written side by side are multiplied: ' + mathHTML(shown) + ' means ' + (coeff === 1 ? '' : coeff + ' × ') + names.join(' × ') + '.</li>' +
+        '<li>Swap in the numbers, keeping negatives in brackets: ' + subbed + '.</li>' +
+        '<li>Multiply. Count the negatives: an even number of them makes the answer positive, an odd number negative. = <b>' + value + '</b>.</li></ol>',
       hint: 'Replace each letter with its number, then multiply. Two negatives multiply to a positive.',
     });
   }
@@ -100,12 +105,17 @@ MathLab.app('substitution', {
 
     const question = mathHTML(c1 + x + y) + (minus ? ' − ' : ' + ') + mathHTML(c2 + z);
 
+    const b = (v) => (v < 0 ? '(' + v + ')' : v);
     return round({
       prompt: 'Find the value of:',
       question,
       given: givens([x, y, z], vals),
       value,
       solution: String(value),
+      rightWhy: first + (minus ? ' − ' : ' + ') + b(second) + ' = ' + value + '.',
+      explain: '<ol><li>First part: ' + c1 + ' × ' + b(vals[x]) + ' × ' + b(vals[y]) + ' = ' + first + '.</li>' +
+        '<li>Second part: ' + c2 + ' × ' + b(vals[z]) + ' = ' + second + '.</li>' +
+        '<li>Then ' + first + (minus ? ' − ' : ' + ') + b(second) + ' = <b>' + value + '</b>' + (minus && second < 0 ? ' (taking away a negative adds)' : '') + '.</li></ol>',
       hint: 'Do each part on its own first, then subtract or add. ' +
             c1 + '<i class="var">' + x + '</i><i class="var">' + y + '</i> means ' +
             c1 + ' × ' + vals[x] + ' × ' + vals[y] + '.',
@@ -137,6 +147,7 @@ MathLab.app('substitution', {
       given: givens([x, y, z], vals),
       value: k,
       solution: String(k),
+      explain: '<ol><li>Top: ' + vx + ' + ' + vy + ' + ' + vz + ' = ' + (vx + vy + vz) + '.</li><li>Bottom: ' + vx + ' − ' + (vz < 0 ? '(' + vz + ')' : vz) + ' = ' + den + '.</li><li>Divide: ' + (vx + vy + vz) + ' ÷ ' + den + ' = <b>' + k + '</b>.</li></ol>',
       hint: 'Work out the top and the bottom separately, then divide. Top = ' +
             vx + ' + ' + vy + ' + ' + vz + '.',
     });
@@ -164,6 +175,7 @@ MathLab.app('substitution', {
       given: givens([x, y, z], vals),
       value,
       solution: String(value),
+      explain: '<ol><li>Bottom: ' + vx + ' + ' + (vz < 0 ? '(' + vz + ')' : vz) + ' = ' + s + '.</li><li>Top: ' + c + ' × ' + (vy < 0 ? '(' + vy + ')' : vy) + ' = ' + c * vy + '.</li><li>Divide: ' + c * vy + ' ÷ ' + s + ' = <b>' + value + '</b>.</li></ol>',
       hint: 'Bottom first: ' + vx + ' + ' + vz + ' = ' + s +
             '. Then divide the top by it.',
     });

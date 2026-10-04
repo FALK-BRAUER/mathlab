@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Crossing Point · mathlab</title>
-<link rel="stylesheet" href="../shared/theme.css?v=5888ae40">
+<link rel="stylesheet" href="../shared/theme.css?v=1129e16b">
 </head>
 <body>
 <main class="wrap">
@@ -16,8 +16,8 @@
   <div id="game"></div>
 </main>
 
-<script src="../shared/engine.js?v=fa8318bc"></script>
-<script src="../shared/linear.js?v=c28d79ac"></script>
+<script src="../shared/engine.js?v=efd654da"></script>
+<script src="../shared/linear.js?v=ee1df055"></script>
 <script src="../shared/grid.js?v=16d8f245"></script>
 <script>
 MathLab.app('crossing', {
@@ -83,7 +83,151 @@ MathLab.app('crossing', {
     return { trap: 'crossing-other', why: 'Follow both lines to where they meet.' };
   }
 
-  /* ---------------- ① find the crossing ---------------- */
+  const ptQ = (x, y) => '(' + qText(x) + ', ' + qText(y) + ')';
+  const lineHTML = (d) => L.dispHTML(d);
+
+  /** Working for "where does this line cross the y-axis / x-axis" — with this line's numbers. */
+  function axisWork(e, axis) {
+    const a = L.coef(e, 'x'), b = L.coef(e, 'y');
+    if (axis === 'y') {
+      const v = L.yIntercept(e);
+      return 'Put x = 0: ' + lineHTML({ L: [L.T(b, 'y')], R: [L.T(e.k)] }) + ', so y = ' + L.qHTML(v) + ' → ' + ptQ(0, v);
+    }
+    const v = L.xIntercept(e);
+    return 'Put y = 0: ' + lineHTML({ L: [L.T(a, 'x')], R: [L.T(e.k)] }) + ', so x = ' + L.qHTML(v) + ' → ' + ptQ(v, 0);
+  }
+
+  const EXPLAIN_CROSS = '<ol><li>Each line is every point that makes its equation true.</li>' +
+    '<li>The crossing is the one point on BOTH lines — so it makes BOTH equations true. That pair is the solution.</li>' +
+    '<li>An intercept is different: where ONE line meets an axis. It always has a 0 in it.</li>' +
+    '<li>Always check the crossing in both equations.</li></ol>';
+
+  /* ---------------- ① step by step: build both lines, then cross ---------------- */
+
+  function guidedRound() {
+    const { e1, e2, sol } = L.graphPair({});
+    const m1 = L.gradient(e1), c1 = L.yIntercept(e1);
+    const B = L.scale(L.normal(e2), pick([1, -1]));
+    const xiB = L.xIntercept(e2);
+    const useXInt = xiB && L.isInt(xiB) && Math.abs(xiB.n) <= 6 && !L.isZero(xiB);
+    const a = lineHTML(L.layoutLine(e1)), b = lineHTML(L.layoutStd(B, ORDER));
+
+    const phases = [
+      { line: 0, ask: 'Line A: ' + a + '. Where does it cross the <b>y-axis</b>? Tap that point.',
+        ok: (p) => p.x === 0 && eq(Q(p.y), c1),
+        because: 'In y = mx + c the number on its own, ' + qText(c1) + ', is where it crosses the y-axis: ' + ptQ(0, c1) + '.',
+        wrong: (p) => (p.y === 0 && eq(Q(p.x), c1) ? { trap: 'intercept-x-axis', why: 'That is on the x-axis. The y-intercept sits on the y-axis, where x = 0: ' + ptQ(0, c1) + '.' }
+          : p.x === 0 && eq(Q(p.y), L.neg(c1)) ? { trap: 'intercept-sign', why: 'Check the sign: c is ' + qText(c1) + '.' }
+          : { trap: 'intercept-other', why: 'On the y-axis x = 0. Put x = 0 into y = mx + c: y = c = ' + qText(c1) + '.' }) },
+      { line: 0, ask: 'Now use the gradient ' + L.qHTML(m1) + ': from ' + ptQ(0, c1) + ' go ' + m1.d + ' right and ' + (m1.n < 0 ? -m1.n + ' down' : m1.n + ' up') + '. Tap that point.',
+        ok: (p) => L.satisfies(e1, { x: Q(p.x), y: Q(p.y) }) && !(p.x === 0),
+        because: 'Gradient ' + qText(m1) + ' = ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + ' for every ' + m1.d + ' across, so ' + ptQ(m1.d, L.add(c1, m1.n)) + ' is on the line too.',
+        wrong: (p) => (L.satisfies(e1, { x: Q(p.x), y: Q(-p.y + 2 * L.num(c1)) }) ? { trap: 'gradient-sign', why: 'Wrong direction: ' + (m1.n < 0 ? 'a negative gradient goes DOWN as you go right.' : 'a positive gradient goes UP as you go right.') }
+          : { trap: 'gradient-wrong', why: 'Across first (' + m1.d + '), then ' + (m1.n < 0 ? 'down ' + -m1.n : 'up ' + m1.n) + '. Count the squares from ' + ptQ(0, c1) + '.' }) },
+      { line: 1, ask: 'Line B: ' + b + '. Put <b>x = 0</b> — where does it cross the y-axis? Tap it.',
+        ok: (p) => p.x === 0 && eq(Q(p.y), L.yIntercept(e2)),
+        because: axisWork(B, 'y') + '.',
+        wrong: (p) => (p.y === 0 ? { trap: 'intercepts-swapped', why: 'x = 0 is the y-axis (up and down). ' + axisWork(B, 'y') + '.' }
+          : { trap: 'intercept-other', why: axisWork(B, 'y') + '.' }) },
+      useXInt
+        ? { line: 1, ask: 'Put <b>y = 0</b> in line B — where does it cross the x-axis? Tap it.',
+          ok: (p) => p.y === 0 && eq(Q(p.x), xiB),
+          because: axisWork(B, 'x') + '. Two points — line B is drawn.',
+          wrong: (p) => (p.x === 0 ? { trap: 'intercepts-swapped', why: 'y = 0 is the x-axis (left to right). ' + axisWork(B, 'x') + '.' }
+            : L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) ? { trap: 'intercept-other', why: 'That point IS on line B — but the x-intercept has y = 0. ' + axisWork(B, 'x') + '.' }
+            : { trap: 'intercept-sign', why: axisWork(B, 'x') + '.' }) }
+        : { line: 1, ask: 'Find one more point on line B: pick an x, work out y from ' + b + ', and tap it.',
+          ok: (p) => L.satisfies(e2, { x: Q(p.x), y: Q(p.y) }) && p.x !== 0,
+          because: 'It makes ' + b + ' true, so it is on line B. Two points — line B is drawn.',
+          wrong: () => ({ trap: 'line-other', why: 'Put your x into ' + b + ' and solve for y. The gradient of B is ' + qText(L.gradient(e2)) + ', which helps.' }) },
+      { line: 2, ask: 'Both lines are drawn. Tap where they <b>cross</b>.',
+        ok: (p) => eq(Q(p.x), sol.x) && eq(Q(p.y), sol.y),
+        because: ptQ(sol.x, sol.y) + ' is on both lines, so it makes both equations true:',
+        wrong: (p) => judgeTap(p, e1, e2, sol) },
+    ];
+
+    return {
+      prompt: 'Build both lines step by step, then find where they cross.',
+      question: '',
+      solution: ptQ(sol.x, sol.y),
+      explain: () => '<ol><li>Line A, ' + a + ': start at the y-intercept ' + ptQ(0, c1) + ', then use the gradient ' + L.qHTML(m1) + ' for a second point.</li>' +
+        '<li>Line B, ' + b + ': ' + axisWork(B, 'y') + (useXInt ? '; ' + axisWork(B, 'x') : '') + '.</li>' +
+        '<li>Where they cross: ' + ptQ(sol.x, sol.y) + '.<div class="checks">' + checks(e1, e2, { x: L.num(sol.x), y: L.num(sol.y) }).replace(/^<div class="checks">|<\/div>$/g, '') + '</div></li></ol>',
+      mount(stage, submit) {
+        eqsBlock(stage, a, b);
+        // the instruction sits ABOVE the grid: below it, on a phone, it is off-screen
+        const status = addHTML(stage, '<p class="step-prompt"></p>').firstChild;
+        const grid = Grid.create(stage, {});
+        const row = addHTML(stage, '<div class="answer-row"><button type="button">Check</button></div>');
+        const btn = row.querySelector('button');
+        const why = addHTML(stage, '<p class="why-line"> </p>').firstChild;
+        let at = 0, misses = 0, tries = 0, pk = null;
+        const placed = [[], []];
+
+        function start() {
+          const ph = phases[at];
+          status.innerHTML = '<span class="kind-blurb">Step ' + (at + 1) + ' of ' + phases.length + '</span>' + ph.ask;
+          tries = 0;
+          pk = Grid.picker(grid, { max: 1 });
+          btn.hidden = false;
+          btn.disabled = false;
+        }
+
+        function advance(p, ph) {
+          pk.stop(); pk.clear();
+          if (ph.line < 2) {
+            placed[ph.line].push(p);
+            grid.point(p.x, p.y, { cls: ph.line ? 'hot' : 'given', label: '(' + p.x + ', ' + p.y + ')' });
+            if (placed[ph.line].length === 2) grid.line(ph.line ? e2 : e1, { cls: ph.line ? 'b' : 'a', label: ph.line ? 'B' : 'A' });
+          }
+          btn.hidden = true;
+          const cont = addHTML(stage, '<div class="answer-row"><button type="button" class="continue">' + (at === phases.length - 1 ? 'Finish' : 'Continue →') + '</button></div>');
+          cont.querySelector('button').addEventListener('click', () => {
+            cont.remove();
+            why.innerHTML = ' ';
+            at++;
+            if (at < phases.length) { start(); return; }
+            submit(misses === 0, Math.max(6, 20 - 3 * misses), 'All five steps — built from the equations, not guessed.');
+          });
+        }
+
+        btn.addEventListener('click', () => {
+          const [p] = pk.points();
+          const ph = phases[at];
+          if (!p) { why.className = 'why-line bad'; why.innerHTML = 'Tap a point on the grid first.'; return; }
+          if (ph.ok(p)) {
+            why.className = 'why-line good';
+            why.innerHTML = ph.because + (ph.line === 2 ? checks(e1, e2, p) : '');
+            if (ph.line === 2) grid.point(p.x, p.y, { cls: 'good', label: '(' + p.x + ', ' + p.y + ')' });
+            advance(p, ph);
+            return;
+          }
+          misses++; tries++;
+          const w = ph.wrong(p) || { trap: 'crossing-other', why: 'Not that one.' };
+          note('trap', { trap: w.trap });
+          why.className = 'why-line bad';
+          if (tries >= 2) {
+            // show it, explain it, move on — a third blind try teaches nothing
+            const want = ph.line === 2 ? { x: L.num(sol.x), y: L.num(sol.y) }
+              : at === 0 ? { x: 0, y: L.num(c1) }
+              : at === 1 ? { x: m1.d, y: L.num(L.add(c1, m1.n)) }
+              : at === 2 ? { x: 0, y: L.num(L.yIntercept(e2)) }
+              : useXInt ? { x: L.num(xiB), y: 0 } : (() => { for (let x = 1; x <= 6; x++) { const y = L.div(L.sub(e2.k, L.mul(L.coef(e2, 'x'), x)), L.coef(e2, 'y')); if (L.isInt(y) && Math.abs(y.n) <= 6) return { x, y: y.n }; } return { x: 0, y: L.num(L.yIntercept(e2)) }; })();
+            why.innerHTML = w.why + ' It is ' + '(' + want.x + ', ' + want.y + '). ' + ph.because;
+            if (ph.line === 2) grid.point(want.x, want.y, { cls: 'good' });
+            advance(want, ph);
+            return;
+          }
+          why.innerHTML = w.why + ' Try again.';
+          pk.clear();
+        });
+
+        start();
+      },
+    };
+  }
+
+  /* ---------------- spot the crossing (Mixed only) ---------------- */
 
   function findRound() {
     const { e1, e2, sol } = L.graphPair({});
@@ -92,6 +236,7 @@ MathLab.app('crossing', {
       prompt: 'Where do the lines cross? Tap the point.',
       question: '',
       solution: pt(sol),
+      explain: EXPLAIN_CROSS,
       hint: 'Ignore where the lines hit the axes. Look for the one spot where blue and orange touch.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
@@ -126,11 +271,14 @@ MathLab.app('crossing', {
       prompt: 'Draw both lines, then find where they cross.',
       question: '',
       solution: pt(sol),
+      explain: () => '<ol><li>Line A: ' + a + ' — ' + axisWork(e1, 'y') + ', then use the gradient ' + L.qHTML(L.gradient(e1)) + '.</li>' +
+        '<li>Line B: ' + b + ' — ' + axisWork(e2, 'y') + ', then the gradient ' + L.qHTML(L.gradient(e2)) + '.</li>' +
+        '<li>They cross at ' + pt(sol) + ' — check it in both.</li></ol>',
       hint: 'For each line find two points — the intercepts work well — and tap them.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
-        const grid = Grid.create(stage, {});
         const status = addHTML(stage, '<p class="step-prompt"></p>').firstChild;
+        const grid = Grid.create(stage, {});
         const row = addHTML(stage, '<div class="answer-row"><button type="button">Check</button></div>');
         const btn = row.querySelector('button');
         const why = addHTML(stage, '<p class="why-line"> </p>').firstChild;
@@ -213,6 +361,9 @@ MathLab.app('crossing', {
     return {
       prompt: 'What is the orange point?',
       question: '',
+      explain: '<ol><li><b>Intercept</b>: where ONE line meets an axis. On the x-axis y = 0; on the y-axis x = 0 — so an intercept always has a 0 in it.</li>' +
+        '<li><b>Intersection</b> (crossing): where the TWO lines meet. It is on both lines, so it makes both equations true.</li>' +
+        '<li>Test a point: is one of its numbers 0? Is it on line A, line B, or both?</li></ol>',
       solution: pt(target) + ' is ' + isAlso.join(' and '),
       hint: 'On an axis, one of the numbers is 0. Where the lines cross, the point is on both of them.',
       mount(stage, submit) {
@@ -278,6 +429,9 @@ MathLab.app('crossing', {
       prompt: 'How many solutions does this pair have?',
       question: '',
       solution: answer[kind],
+      explain: '<ol><li>Rearrange both into y = mx + c.</li><li>Different gradients → the lines cross once → <b>exactly one</b> solution (even if they cross at a right angle).</li>' +
+        '<li>Same gradient, different intercept → parallel, never meet → <b>no</b> solution. Algebra gives something false like 0 = 7.</li>' +
+        '<li>Same gradient AND same intercept → the same line twice → <b>infinitely many</b>. Algebra gives 0 = 0.</li></ol>',
       hint: 'Get both into y = mx + c. Compare the gradients first, then the intercepts.',
       mount(stage, submit) {
         eqsBlock(stage, a, b);
@@ -317,6 +471,7 @@ MathLab.app('crossing', {
       prompt: 'Is ' + pt(cand) + ' the solution of this pair?',
       question: '',
       solution: works ? 'Yes' : 'No — the solution is ' + pt(sol),
+      explain: 'A solution of a pair must make BOTH equations true. Put x and y into each one: work out the left side, compare it with the right side. Equal both times → it is the solution. Equal in only one → it is just a point on that one line.',
       hint: 'Put x and y into BOTH equations. Do the two sides come out equal each time?',
       mount(stage, submit) {
         const box = document.createElement('div');
@@ -338,10 +493,10 @@ MathLab.app('crossing', {
     };
   }
 
-  const MIX = [findRound, drawRound, sortRound, countRound, checkRound];
+  const MIX = [findRound, guidedRound, drawRound, sortRound, countRound, checkRound];
 
   return [
-    { name: '① Find the crossing', make: findRound },
+    { name: '① Step by step', make: guidedRound },
     { name: '② Draw both', make: drawRound },
     { name: '③ Intercept or crossing?', make: sortRound },
     { name: '④ How many solutions?', make: countRound },

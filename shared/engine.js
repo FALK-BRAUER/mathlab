@@ -200,6 +200,8 @@ const MathLab = (() => {
        { question, given?, hint, solution, mount(stage, submit) }
      mount() renders the answer UI and calls submit(isCorrect) when the kid answers. */
 
+  let goto = () => {};
+
   function createGame(config) {
     const root = document.querySelector(config.mount || '#game');
     const saved = store.read(config.key);
@@ -218,7 +220,6 @@ const MathLab = (() => {
         <div class="stat"><b data-streak>0</b><span>Streak</span></div>
         <div class="stat"><b data-best>0</b><span>Best</span></div>
       </div>
-      <div class="feedback" data-feedback hidden></div>
       <div class="hint" data-hint hidden></div>
       <div class="card">
         <p class="prompt" data-prompt></p>
@@ -226,6 +227,7 @@ const MathLab = (() => {
         <ul class="given" data-given></ul>
         <div data-stage></div>
       </div>
+      <div class="feedback" data-feedback hidden></div>
       <div class="answer-row">
         <button data-next hidden>Next question →</button>
         <button class="ghost" data-hint-btn${config.ownHints ? ' hidden' : ''}>Need a hint?</button>
@@ -277,6 +279,14 @@ const MathLab = (() => {
       if (round.noScore) { el.next.hidden = false; return; }   // a summary screen, not a question
       note('round', { ok: !!correct, firstTry: round.firstTry !== false && !!correct });
 
+      // The explanation of THIS question, worked through with its own numbers. Open after a
+      // miss (that is when it is read); one tap away after a hit, so "why" is always there.
+      const explain = typeof round.explain === 'function' ? round.explain(!!correct) : round.explain;
+      const panel = explain
+        ? '<details class="explain"' + (correct ? '' : ' open') + '><summary>How it works</summary><div class="explain-body">' + explain + '</div></details>'
+        : '';
+      why = why || (correct ? round.rightWhy : round.wrongWhy) || '';
+
       if (correct) {
         streak += 1;
         score += typeof points === 'number' ? points : 10 + Math.min(streak, 10) * 2;
@@ -286,18 +296,28 @@ const MathLab = (() => {
         }
         el.feedback.className = 'feedback good';
         el.feedback.innerHTML = pick(['Nice one! 🎉', 'Correct! ⭐️', 'Got it! 🚀', 'Spot on! 💡']) +
-          (why ? '<span class="why">' + why + '</span>' : '');
+          (why ? '<span class="why">' + why + '</span>' : '') + panel;
       } else {
         streak = 0;
         el.feedback.className = 'feedback bad';
         el.feedback.innerHTML = 'Not quite.' +
           (why ? '<span class="why">' + why + '</span>' : '') +
-          (round.solution ? '<span class="why">Answer: <b>' + round.solution + '</b></span>' : '');
+          (round.solution ? '<span class="why">Answer: <b>' + round.solution + '</b></span>' : '') + panel;
+      }
+
+      // mastery nudge: five in a row on a level means it is time for the next one
+      const nextLv = config.levels[level + 1];
+      if (correct && streak > 0 && streak % 5 === 0 && nextLv && !/Report/.test(nextLv.name)) {
+        el.feedback.insertAdjacentHTML('beforeend', '<div class="answer-row"><button type="button" class="continue" data-levelup>' +
+          streak + ' in a row — ready for ' + nextLv.name + ' →</button></div>');
+        el.feedback.querySelector('[data-levelup]').addEventListener('click', () => el.levels.children[level + 1].click());
       }
 
       el.feedback.hidden = false;
       el.next.hidden = false;
-      el.next.focus();
+      el.next.focus({ preventScroll: true });
+      // on a phone the feedback is below the fold — bring it, not the button, into view
+      try { el.feedback.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* old browsers */ }
       paintScores();
     }
 
@@ -323,6 +343,13 @@ const MathLab = (() => {
     }
 
     el.next.addEventListener('click', newRound);
+
+    /** Switch level from inside a round — a worked example's "Now you try" button. */
+    goto = (nameOrIndex) => {
+      const i = typeof nameOrIndex === 'number' ? nameOrIndex
+        : config.levels.findIndex((lv) => lv.name.includes(nameOrIndex));
+      if (i >= 0 && el.levels.children[i]) el.levels.children[i].click();
+    };
     el.hintBtn.addEventListener('click', () => {
       el.hint.innerHTML = '<b>Hint:</b> ' + (round.hint || 'Take it one step at a time.');
       el.hint.hidden = !el.hint.hidden;
@@ -368,7 +395,7 @@ const MathLab = (() => {
    *   options: [{ html, ok, why, trap }]   (caller shuffles)
    *   onDone(misses, box) when the right one is picked
    */
-  function choice(host, { title, options, onDone, onMiss }) {
+  function choice(host, { title, options, onDone, onMiss, cont = true, contLabel = 'Continue →' }) {
     const box = document.createElement('div');
     box.className = 'predict';
     box.innerHTML = (title ? '<b>' + title + '</b>' : '') +
@@ -391,8 +418,19 @@ const MathLab = (() => {
           b.classList.add('hit');
           buttons.forEach((x) => { x.disabled = true; });
           why.className = 'why-line good';
-          why.innerHTML = opt.why || ' ';
-          setTimeout(() => onDone(misses, box), 380);
+          why.innerHTML = opt.why || opt.because || 'Yes.';
+          if (!cont) { setTimeout(() => onDone(misses, box), 380); return; }
+          // never move on by itself: the reason it is right is the lesson, so it stays until read
+          const row = document.createElement('div');
+          row.className = 'answer-row';
+          const go = document.createElement('button');
+          go.type = 'button';
+          go.className = 'continue';
+          go.textContent = contLabel;
+          go.addEventListener('click', () => { go.disabled = true; row.remove(); onDone(misses, box); });
+          row.appendChild(go);
+          box.appendChild(row);
+          go.focus({ preventScroll: true });
         } else {
           misses += 1;
           b.classList.add('miss');
@@ -505,6 +543,18 @@ const MathLab = (() => {
         Object.values(inputs).forEach((i) => { i.disabled = true; });
         go.disabled = true;
         pad.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        pad.hidden = true;
+        if (typeof res.next === 'function') {
+          const row = document.createElement('div');
+          row.className = 'answer-row';
+          const c = document.createElement('button');
+          c.type = 'button';
+          c.className = 'continue';
+          c.textContent = 'Continue →';
+          c.addEventListener('click', () => { c.disabled = true; row.remove(); res.next(); });
+          row.appendChild(c);
+          box.appendChild(row);
+        }
       }
     }
 
@@ -512,6 +562,37 @@ const MathLab = (() => {
     host.appendChild(box);
     focus(Object.values(inputs)[0]);
     return { box, inputs, why };
+  }
+
+  /**
+   * A worked example, one step at a time: each step shows the line and WHY it is allowed,
+   * and the next appears only when she asks for it. Studying worked examples before
+   * solving is one of the best-supported effects in maths learning (g ≈ 0.48); revealing
+   * them a step at a time keeps it from being a wall of text.
+   *   steps: [{ html, because }]
+   */
+  function worked(host, { title, steps, onDone, tryLabel = 'Now you try one →', tryLevel = 1 }) {
+    const box = document.createElement('div');
+    box.className = 'worked';
+    box.innerHTML = (title ? '<b class="worked-title">' + title + '</b>' : '') + '<ol class="worked-steps"></ol>' +
+      '<div class="answer-row"><button type="button" data-more>Show the next step</button></div>';
+    const list = box.querySelector('ol');
+    const more = box.querySelector('[data-more]');
+    let at = 0;
+    function show() {
+      const st = steps[at++];
+      const li = document.createElement('li');
+      li.innerHTML = '<div class="w-line">' + st.html + '</div>' + (st.because ? '<div class="w-why">' + st.because + '</div>' : '');
+      list.appendChild(li);
+      if (at >= steps.length) {
+        more.textContent = tryLabel;
+        more.onclick = () => { if (onDone) onDone(); goto(tryLevel); };
+      }
+    }
+    more.onclick = show;
+    host.appendChild(box);
+    show();
+    return box;
   }
 
   /* ---------------- app registry ----------------
@@ -535,7 +616,8 @@ const MathLab = (() => {
     rnd, rndNonZero, pick, sample, shuffle,
     parseTerm, signature, canon, sameExpression, splitTerms,
     formatTerm, formatSum, mathHTML, sup,
-    createGame, textAnswer, choice, fields,
+    createGame, textAnswer, choice, fields, worked,
+    goto: (x) => goto(x),
     app, run, listApps,
     note, readLog, store,
   };
